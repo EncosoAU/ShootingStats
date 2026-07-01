@@ -1,0 +1,1947 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Netball Carnival Tracker</title>
+    <style>
+        :root {
+            --primary: #2b5c8f;
+            --primary-soft: rgba(43, 92, 143, 0.85);
+            --success: #2e7d32;
+            --danger: #c62828;
+            --warning: #ed6c02;
+            --neutral-dark: #475569;
+            --background: #f4f6f9;
+            --card-bg: #ffffff;
+            --text: #333333;
+            
+            /* Opponent Card Theme Colors - Updated to Neutral Charcoal / Slate Gray */
+            --opp-bg: #f8fafc;
+            --opp-border: #64748b;
+            --opp-text: #374151;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            background-color: var(--background);
+            color: var(--text);
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 650px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        h1 {
+            color: var(--primary);
+            margin: 0;
+            font-size: 1.8rem;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        h3 { margin-top: 0; margin-bottom: 10px; color: #444; }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        /* Dropdown/Accordion Styles */
+        details.card {
+            padding: 0;
+            overflow: hidden;
+        }
+        details.card summary {
+            padding: 15px;
+            font-size: 1.17rem;
+            font-weight: bold;
+            color: #444;
+            cursor: pointer;
+            outline: none;
+            -webkit-user-select: none; /* Fixed Error 1: Added Safari prefix */
+            user-select: none;
+        }
+        details.card summary::-webkit-details-marker {
+            color: var(--primary);
+        }
+        .details-content {
+            padding: 0 15px 15px 15px;
+        }
+
+        .form-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+
+        .btn {
+            padding: 10px 15px;
+            font-weight: bold;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            color: white;
+            background-color: var(--primary);
+            white-space: nowrap;
+        }
+
+        .player-tag {
+            display: inline-flex;
+            align-items: center;
+            background: #e0e0e0;
+            padding: 5px 10px;
+            border-radius: 15px;
+            margin: 4px;
+            font-size: 0.9rem;
+        }
+
+        .player-tag button {
+            background: none;
+            border: none;
+            color: #666;
+            margin-left: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        /* Updated Match Score Banner: Minimalist Ice Blue */
+        .score-banner {
+            background: #f0f4f8;
+            color: #1e293b;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            line-height: 1.5;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .q-banner {
+            margin-bottom: 3px;
+            font-size: 0.95rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Modernized translucent Dropdown Button */
+        details.score-dropdown {
+            background: rgba(255, 255, 255, 0.45);
+            border: 1px solid rgba(30, 41, 59, 0.12);
+            border-radius: 6px;
+            margin-bottom: 10px;
+            overflow: hidden;
+        }
+        details.score-dropdown summary {
+            padding: 8px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            color: #1e293b;
+            text-align: center;
+            cursor: pointer;
+            list-style: none;
+        }
+        details.score-dropdown summary::-webkit-details-marker {
+            display: none;
+        }
+        details.score-dropdown[open] summary {
+            border-bottom: 1px dashed rgba(30, 41, 59, 0.2);
+            margin-bottom: 8px;
+        }
+
+        .live-grid-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+        
+        .full-width-box {
+            grid-column: span 2;
+        }
+
+        @media (max-width: 480px) {
+            .live-grid-container { grid-template-columns: 1fr !important; }
+            .totals-grid { grid-template-columns: 1fr !important; }
+            .setup-stats-grid { grid-template-columns: 1fr !important; }
+            .full-width-mobile { grid-column: span 1 !important; }
+            .history-actions { flex-direction: column; }
+            .q-controls, .match-controls { flex-direction: column; }
+        }
+
+        .shooter-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .role-title { font-weight: bold; font-size: 1.1rem; color: var(--primary); }
+        .stat-pct { font-size: 1.8rem; font-weight: bold; margin: 5px 0; }
+        .stat-raw { font-size: 0.85rem; color: #333; font-weight: 500; margin-bottom: 3px; line-height: 1.3; }
+        .stat-carnival-line { font-size: 0.8rem; color: #64748b; font-weight: 500; margin-bottom: 10px; }
+
+        .btn-shot-group { display: flex; gap: 8px; margin-bottom: 8px; }
+        
+        .btn-goal { background-color: var(--success); flex: 1; padding: 12px; font-weight: bold;}
+        .btn-miss { background-color: var(--danger); flex: 1; padding: 12px; font-weight: bold;}
+
+        .btn-undo {
+            background-color: var(--neutral-dark);
+            width: 100%;
+            padding: 6px;
+            font-size: 0.8rem;
+            border-radius: 4px;
+        }
+
+        .q-controls { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; }
+        .q-controls button { font-size: 1rem; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; }
+        
+        /* Translucent Orange End Quarter Button */
+        .btn-quarter { 
+            background-color: rgba(237, 108, 2, 0.2) !important; 
+            color: #c2410c !important; 
+            border: 1px solid #fed7aa !important;
+            flex: 2; 
+            width: 100%; 
+            padding: 12px;
+        }
+        .btn-quarter:hover {
+            background-color: rgba(237, 108, 2, 0.3) !important;
+        }
+        
+        /* Translucent Red Reset Quarter Button */
+        .btn-reset-q { 
+            background-color: rgba(225, 29, 72, 0.1) !important; 
+            border: 1px solid #fda4af !important; 
+            color: #e11d48 !important; 
+            flex: 1; 
+            width: 100%;
+            padding: 11px !important; 
+            font-size: 0.9rem !important;
+            font-weight: bold !important;
+        }
+        .btn-reset-q:hover {
+            background-color: rgba(225, 29, 72, 0.2) !important;
+        }
+
+        .match-controls { display: flex; gap: 8px; margin-bottom: 15px; align-items: center; }
+        .match-controls button { font-size: 1rem; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; }
+        .btn-save { background-color: #0284c7; color: white; flex: 2; width: 100%; padding: 12px; }
+        
+        /* Translucent Red Discard Match Button */
+        .btn-reset-match { 
+            background-color: rgba(225, 29, 72, 0.1) !important; 
+            border: 1px solid #fda4af !important; 
+            color: #e11d48 !important; 
+            flex: 1; 
+            width: 100%;
+            padding: 11px !important; 
+            font-size: 0.9rem !important;
+            font-weight: bold !important;
+        }
+        .btn-reset-match:hover {
+            background-color: rgba(225, 29, 72, 0.2) !important;
+        }
+
+        .log-box {
+            max-height: 120px;
+            overflow-y: auto;
+            background: #fafafa;
+            border: 1px solid #eee;
+            padding: 8px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+        }
+
+        .totals-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .setup-stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .setup-stat-box {
+            background: #f8fafc;
+            border: 1px dashed #cbd5e1;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            color: #475569;
+        }
+        .setup-stat-box strong { color: var(--primary); }
+
+        .total-card-box {
+            background: #f1f5f9;
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+            border: 1px solid #cbd5e1;
+        }
+        .total-val {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        .total-lbl {
+            font-size: 0.75rem;
+            color: #475569;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            text-align: center;
+        }
+        .history-table th, .history-table td {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            vertical-align: middle;
+            text-align: center;
+        }
+        .history-table th { background: #f0f0f0; }
+
+        .history-card {
+            border: 1px solid #e2e8f0;
+            border-left: 5px solid var(--primary);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 12px;
+            background: #ffffff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+        .history-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #f1f5f9;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+        }
+        .history-score {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--primary);
+            text-align: right;
+        }
+        .scrollable-quarter-data {
+            max-height: 140px;
+            overflow-y: auto;
+            background: #f8fafc;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+            font-size: 0.85rem;
+            margin-top: 12px;
+            color: #334155;
+        }
+        .scrollable-quarter-data::-webkit-scrollbar { width: 6px; }
+        .scrollable-quarter-data::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        .scrollable-quarter-data::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        
+        .history-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+        
+        /* Fixed Error 3: Removed layout floating issues from here since it's an absolute child now */
+        .btn-clear { 
+            background-color: #64748b; 
+            font-size: 0.8rem; 
+            padding: 5px 10px; 
+            color: white; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer;
+        }
+        
+        .export-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .btn-carnival-share { background-color: var(--success); width: 100%; padding: 12px; font-size: 1rem; font-weight: bold; grid-column: span 2;}
+        .btn-csv { background-color: #0ea5e9; width: 100%; padding: 12px; font-size: 1rem; font-weight: bold; grid-column: span 2;}
+
+        .btn-edit-action { background-color: #f59e0b; flex: 1; padding: 8px; font-size: 0.85rem; border-radius: 4px; color: white; border: none; font-weight: bold; cursor: pointer; text-align: center;}
+        .btn-row-share { background-color: var(--success); flex: 1; padding: 8px; font-size: 0.85rem; border-radius: 4px; color: white; border: none; font-weight: bold; cursor: pointer; text-align: center;}
+        .btn-sheets-row { background-color: #10b981; flex: 1; padding: 8px; font-size: 0.85rem; border-radius: 4px; color: white; border: none; font-weight: bold; cursor: pointer; text-align: center;}
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 1000;
+        }
+        .modal-card {
+            background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 350px;
+            box-shadow: 0 10px 15px rgba(0,0,0,0.2);
+        }
+        .modal-card h3 { margin-top: 0; margin-bottom: 15px; color: var(--primary); text-align: center; }
+        .checkbox-group { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; font-size: 1rem; }
+        .checkbox-group label { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+        .checkbox-group input { width: auto; transform: scale(1.2); margin: 0; }
+        .modal-buttons { display: flex; gap: 10px; }
+        .modal-buttons button { flex: 1; padding: 12px; font-size: 1rem; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; color: white; }
+        .modal-buttons .btn-share-exec { background-color: var(--success); }
+        .modal-buttons .btn-cancel { background-color: var(--neutral-dark); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1 id="carnival-title-display">Netball Carnival Tracker</h1>
+    </header>
+
+    <details class="card">
+        <summary>1. Carnival & Roster Setup</summary>
+        <div class="details-content">
+            <div class="form-group">
+                <input type="text" id="carnival-name-input" placeholder="Carnival Name (e.g., State Championships)">
+                <input type="text" id="our-team-name" placeholder="Our Team Name (e.g., Comets)">
+            </div>
+            <div class="form-group" style="margin-top: 15px;">
+                <input type="text" id="new-player-name" placeholder="Enter player name...">
+                <button class="btn" onclick="addPlayer()">Add to Squad</button>
+            </div>
+            <div id="roster-list"></div>
+        </div>
+    </details>
+
+    <div class="card">
+        <h3>2. Match Setup</h3>
+        <div class="form-group">
+            <input type="text" id="opponent-name" placeholder="Opponent Team Name (e.g., Wildcats)">
+        </div>
+        <div class="form-group">
+            <select id="select-gs" onchange="assignShooters('gs')" aria-label="Select Goal Shooter (GS)">
+                <option value="">-- Select GS --</option>
+            </select>
+            <select id="select-ga" onchange="assignShooters('ga')" aria-label="Select Goal Attack (GA)">
+                <option value="">-- Select GA --</option>
+            </select>
+        </div>
+
+        <div class="setup-stats-grid">
+            <div class="setup-stat-box" id="setup-gs-stats">
+                <strong>GS Bench Stats:</strong> Select a player
+            </div>
+            <div class="setup-stat-box" id="setup-ga-stats">
+                <strong>GA Bench Stats:</strong> Select a player
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="score-banner">
+            <div style="font-weight: bold; font-size: 1.3rem; margin-bottom: 8px; text-align: center;"><span id="display-our-team">Our Team</span> Vs: <span id="display-opp">???</span></div>
+            
+            <details class="score-dropdown">
+                <summary>📊 View Quarter Details (Tap to Toggle)</summary>
+                <div style="padding: 5px 0;">
+                    <div id="banner-q1" class="q-banner">Q1 Score: --</div>
+                    <div id="banner-q2" class="q-banner">Q2 Score: --</div>
+                    <div id="banner-q3" class="q-banner">Q3 Score: --</div>
+                    <div id="banner-q4" class="q-banner">Q4 Score: --</div>
+                </div>
+            </details>
+
+            <div style="font-size: 1.5rem; border-top: 1px dashed rgba(30,41,59,0.15); margin-top: 10px; padding-top: 10px; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                <strong style="font-size: 1.1rem; text-transform: uppercase; letter-spacing: 0.5px;">Match Score</strong>
+                <div style="display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px;">
+                    <span id="match-us-wrapper"><span id="display-match-team">Our Team</span> <span id="team-total">0</span></span> 
+                    <span style="opacity: 0.7;">-</span> 
+                    <span id="match-opp-wrapper"><span id="display-match-opp">???</span> <span id="opp-total">0</span></span> 
+                </div>
+                <span id="active-q-label" style="font-size: 0.9rem; font-weight: normal; opacity: 0.8; margin-top: 2px;">(Q1 Running)</span>
+            </div>
+        </div>
+
+        <div class="live-grid-container">
+            <div class="shooter-box">
+                <div class="role-title">GS: <span id="name-gs">Unassigned</span></div>
+                <div class="stat-pct" id="pct-gs">0%</div>
+                <div class="stat-raw" id="raw-gs">Quarter: 0/0 (0%)<br>Game: 0/0 (0%)</div>
+                <div class="stat-carnival-line" id="carn-gs-line">Carnival Overall: 0%</div>
+                <div class="btn-shot-group">
+                    <button class="btn btn-goal" onclick="recordShot('gs', true)">GOAL</button>
+                    <button class="btn btn-miss" onclick="recordShot('gs', false)">MISS</button>
+                </div>
+                <button class="btn btn-undo" onclick="undoShot('gs')">↩️ Undo Last Shot</button>
+            </div>
+
+            <div class="shooter-box">
+                <div class="role-title">GA: <span id="name-ga">Unassigned</span></div>
+                <div class="stat-pct" id="pct-ga">0%</div>
+                <div class="stat-raw" id="raw-ga">Quarter: 0/0 (0%)<br>Game: 0/0 (0%)</div>
+                <div class="stat-carnival-line" id="carn-ga-line">Carnival Overall: 0%</div>
+                <div class="btn-shot-group">
+                    <button class="btn btn-goal" onclick="recordShot('ga', true)">GOAL</button>
+                    <button class="btn btn-miss" onclick="recordShot('ga', false)">MISS</button>
+                </div>
+                <button class="btn btn-undo" onclick="undoShot('ga')">↩️ Undo Last Shot</button>
+            </div>
+
+            <div class="shooter-box full-width-box full-width-mobile" style="background: var(--opp-bg); border: 2px solid var(--opp-border); margin-top: 5px;">
+                <div class="role-title" id="opp-card-title" style="color: var(--opp-text);"><strong>Opponent</strong></div>
+                <div class="stat-pct" id="pct-opp" style="color: var(--opp-text);">0%</div>
+                <div class="stat-raw" id="raw-opp" style="color: var(--opp-text);">Quarter: 0/0 (0%)<br>Game: 0/0 (0%)</div>
+                <div class="stat-carnival-line" style="margin-bottom:10px; display:none;" id="quarter-opp-label"></div>
+                <div class="btn-shot-group">
+                    <button class="btn btn-goal" onclick="recordOppShot(true)">OPP GOAL</button>
+                    <button class="btn btn-miss" onclick="recordOppShot(false)">OPP MISS</button>
+                </div>
+                <button class="btn btn-undo" onclick="undoOppShot()">↩️ Undo Opponent Shot</button>
+            </div>
+        </div>
+
+        <div class="q-controls" id="q-controls-container">
+            <button class="btn-quarter" id="quarter-btn" onclick="endQuarter()">⏱️ End Quarter 1</button>
+            <button class="btn-reset-q" id="quarter-reset-btn" onclick="resetCurrentQuarter()">🗑️ Reset Quarter</button>
+        </div>
+        
+        <div class="log-box" id="live-log">Current quarter actions will show here...</div>
+    </div>
+
+    <details class="card" style="border-left: 5px solid var(--warning);">
+        <summary>🎯 Current Match Shooter Summary</summary>
+        <div class="details-content">
+            <div style="overflow-x: auto;">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th style="text-align: center;">Active Player</th>
+                            <th style="text-align: center;">Match Goals / Shots</th>
+                            <th style="text-align: center;">Accuracy %</th>
+                        </tr>
+                    </thead>
+                    <tbody id="current-game-totals-rows">
+                        <tr><td colspan="3" style="text-align:center; color:#999;">No shooters have taken a shot yet this game.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </details>
+
+    <div class="match-controls">
+        <button class="btn-save" onclick="saveMatch()">🔒 Save & Finalise Match</button>
+        <button class="btn-reset-match" onclick="resetCurrentGame()">🗑️ Discard Match</button>
+    </div>
+
+    <div class="card" style="border-left: 5px solid var(--success);">
+        <h3>👤 Individual Player Carnival Stats</h3>
+        <div style="overflow-x: auto;">
+            <table class="history-table">
+                <thead>
+                    <tr>
+                        <th style="text-align: center;">Player Name</th>
+                        <th style="text-align: center;">Goals / Shots</th>
+                        <th style="text-align: center;">Accuracy %</th>
+                    </tr>
+                </thead>
+                <tbody id="player-totals-rows">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div style="position: relative;">
+        <details class="card">
+            <summary>Carnival History Log</summary>
+            <div class="details-content">
+                <div id="history-rows-container" style="margin-top: 15px;">
+                </div>
+            </div>
+        </details>
+        <button class="btn-clear" onclick="clearCarnivalHistory();" style="position: absolute; right: 15px; top: 13px; z-index: 10;">Clear History</button>
+    </div>
+
+    <details class="card" style="background: #e2e8f0; border: 1px solid #cbd5e1;">
+        <summary style="font-size: 1.17rem; font-weight: bold; color: #334155; padding: 15px; cursor: pointer;">📊 Carnival Cumulative Totals</summary>
+        <div class="details-content" style="padding-top: 10px;">
+            <div class="totals-grid">
+                <div class="total-card-box">
+                    <div class="total-val" id="tot-goals">0</div>
+                    <div class="total-lbl">Total Goals</div>
+                </div>
+                <div class="total-card-box">
+                    <div class="total-val" id="tot-misses">0</div>
+                    <div class="total-lbl">Total Misses</div>
+                </div>
+                <div class="total-card-box">
+                    <div class="total-val" id="tot-pct">0%</div>
+                    <div class="total-lbl">Overall Accuracy</div>
+                </div>
+            </div>
+            
+            <div class="export-grid">
+                <button class="btn btn-carnival-share" onclick="shareCarnivalTotals()">🏆 Finalise & Share Totals via Text</button>
+                <button class="btn btn-csv" onclick="exportToCSV()">💾 Download Entire History as CSV</button>
+            </div>
+        </div>
+    </details>
+</div>
+
+<div id="share-modal" class="modal-overlay">
+    <div class="modal-card">
+        <h3>Share Match Stats</h3>
+        <div class="checkbox-group">
+            <label><input type="checkbox" id="chk-totals" checked> Shooting Totals</label>
+            <label><input type="checkbox" id="chk-quarters" checked> Quarter Breakdown</label>
+            <label><input type="checkbox" id="chk-pbp"> Detailed Play-by-Play</label>
+        </div>
+        <div class="modal-buttons">
+            <button class="btn-share-exec" onclick="executeShare()">Share Data</button>
+            <button class="btn-cancel" onclick="closeShareModal()">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const GOOGLE_SHEETS_URL = "https://script.google.com/macros/s/AKfycbz3vZTtk8_GbFb2GiWAl6DJeKycrCiJ88gloRak1J81uO56KjqS6oWo8aucgWoglgCp/exec";
+
+    let players = JSON.parse(localStorage.getItem('netball_players')) || ["Sarah", "Emily", "Jessica"];
+    let carnivalHistory = JSON.parse(localStorage.getItem('netball_history')) || [];
+    let carnivalName = localStorage.getItem('netball_carnival_name') || "Netball Carnival Tracker";
+    let savedOurTeamName = localStorage.getItem('netball_our_team_name') || "Our Team";
+    
+    let pendingShareContext = null; 
+    let individualStatsCache = {};
+
+    let currentMatch = {
+        ourTeam: savedOurTeamName,
+        opponent: "",
+        currentQuarter: 1,
+        matchTotalScore: 0,
+        opponentTotalScore: 0,
+        quartersData: [], 
+        liveGs: { goals: 0, misses: 0 },
+        liveGa: { goals: 0, misses: 0 },
+        liveOpponent: { goals: 0, misses: 0 }, 
+        gsPlayer: "",
+        gaPlayer: "",
+        runningGameTotals: {}, 
+        runningOppTotals: { goals: 0, shots: 0 }, 
+        log: [],
+        shotHistory: [],
+        oppShotHistory: [],
+        playByPlay: [] 
+    };
+
+    window.addEventListener('beforeunload', function (e) {
+        const activeLiveShots = currentMatch.liveGs.goals + currentMatch.liveGs.misses + 
+                               currentMatch.liveGa.goals + currentMatch.liveGa.misses + 
+                               currentMatch.liveOpponent.goals + currentMatch.liveOpponent.misses;
+        
+        if (activeLiveShots > 0 || currentMatch.quartersData.length > 0) {
+            e.preventDefault();
+            e.returnValue = ''; 
+        }
+    });
+
+    window.onload = function() {
+        document.getElementById('carnival-name-input').value = carnivalName === "Netball Carnival Tracker" ? "" : carnivalName;
+        document.getElementById('carnival-title-display').innerText = carnivalName;
+        document.getElementById('carnival-name-input').addEventListener('input', (e) => {
+            carnivalName = e.target.value.trim() || "Netball Carnival Tracker";
+            localStorage.setItem('netball_carnival_name', carnivalName);
+            document.getElementById('carnival-title-display').innerText = carnivalName;
+        });
+
+        document.getElementById('our-team-name').value = savedOurTeamName === "Our Team" ? "" : savedOurTeamName;
+        document.getElementById('display-our-team').innerText = currentMatch.ourTeam;
+        document.getElementById('our-team-name').addEventListener('input', (e) => {
+            currentMatch.ourTeam = e.target.value || "Our Team";
+            localStorage.setItem('netball_our_team_name', currentMatch.ourTeam.trim());
+            document.getElementById('display-our-team').innerText = currentMatch.ourTeam;
+            updateLiveUI();
+        });
+
+        populateDropdowns();
+        renderRosterTags();
+        renderHistory();
+        calculateCarnivalTotals();
+        
+        document.getElementById('opponent-name').addEventListener('input', (e) => {
+            currentMatch.opponent = e.target.value || "???";
+            document.getElementById('display-opp').innerText = currentMatch.opponent;
+            document.getElementById('opp-card-title').innerHTML = `<strong>${currentMatch.opponent.trim()}</strong>`;
+            updateLiveUI(); 
+        });
+
+        updateLiveUI();
+        updateSetupStatsDisplay();
+    };
+
+    function populateDropdowns() {
+        const gsSel = document.getElementById('select-gs');
+        const gaSel = document.getElementById('select-ga');
+        let optionsHtml = players.map(p => `<option value="${p}">${p}</option>`).join('');
+        gsSel.innerHTML = `<option value="">-- Select GS --</option>` + optionsHtml;
+        gaSel.innerHTML = `<option value="">-- Select GA --</option>` + optionsHtml;
+    }
+
+    function clearDropdownSelectors() {
+        document.getElementById('select-gs').value = "";
+        document.getElementById('select-ga').value = "";
+    }
+
+    function renderRosterTags() {
+        localStorage.setItem('netball_players', JSON.stringify(players));
+        const container = document.getElementById('roster-list');
+        container.innerHTML = players.map((p, idx) => `
+            <span class="player-tag">${p}<button onclick="removePlayer(${idx})">&times;</button></span>
+        `).join('');
+    }
+
+    function addPlayer() {
+        const input = document.getElementById('new-player-name');
+        const name = input.value.trim();
+        if (name && !players.includes(name)) {
+            players.push(name);
+            input.value = "";
+            populateDropdowns();
+            renderRosterTags();
+            calculateCarnivalTotals();
+        }
+    }
+
+    function removePlayer(index) {
+        const removedPlayer = players[index];
+        players.splice(index, 1);
+        if (document.getElementById('select-gs').value === removedPlayer) document.getElementById('select-gs').value = "";
+        if (document.getElementById('select-ga').value === removedPlayer) document.getElementById('select-ga').value = "";
+        populateDropdowns();
+        renderRosterTags();
+        assignShooters();
+    }
+
+    function assignShooters(triggeredFrom) {
+        const gsVal = document.getElementById('select-gs').value;
+        const gaVal = document.getElementById('select-ga').value;
+
+        if (gsVal && gaVal && gsVal === gaVal) {
+            alert("You cannot select the same player for both positions!");
+            if (triggeredFrom === 'gs') document.getElementById('select-gs').value = "";
+            else document.getElementById('select-ga').value = "";
+            return;
+        }
+
+        currentMatch.gsPlayer = document.getElementById('select-gs').value || "Unassigned";
+        currentMatch.gaPlayer = document.getElementById('select-ga').value || "Unassigned";
+
+        document.getElementById('name-gs').innerText = currentMatch.gsPlayer;
+        document.getElementById('name-ga').innerText = currentMatch.gaPlayer;
+
+        updateLiveUI();
+        updateSetupStatsDisplay();
+    }
+
+    function updateSetupStatsDisplay() {
+        ['gs', 'ga'].forEach(role => {
+            const pName = currentMatch[role + 'Player'];
+            const container = document.getElementById(`setup-${role}-stats`);
+            
+            if(!pName || pName === "Unassigned") {
+                container.innerHTML = `<strong>${role.toUpperCase()} Bench Stats:</strong> Select a player`;
+                return;
+            }
+
+            let playerLiveGoals = 0;
+            let playerLiveMisses = 0;
+            currentMatch.shotHistory.forEach(shot => {
+                if (shot.name === pName) {
+                    if (shot.isGoal) playerLiveGoals++;
+                    else playerLiveMisses++;
+                }
+            });
+
+            const gameData = currentMatch.runningGameTotals[pName] || { goals: 0, shots: 0 };
+            const combinedGameGoals = gameData.goals + playerLiveGoals;
+            const combinedGameShots = gameData.shots + playerLiveGoals + playerLiveMisses;
+            const gamePct = combinedGameShots > 0 ? Math.round((combinedGameGoals / combinedGameShots) * 100) : 0;
+
+            const carnData = individualStatsCache[pName] || { goals: 0, shots: 0 };
+            const totalCarnGoals = carnData.goals + playerLiveGoals;
+            const totalCarnShots = carnData.shots + playerLiveGoals + playerLiveMisses;
+            const carnPct = totalCarnShots > 0 ? Math.round((totalCarnGoals / totalCarnShots) * 100) : 0;
+
+            container.innerHTML = `<strong>${pName} (${role.toUpperCase()}):</strong><br>Game: ${combinedGameGoals}/${combinedGameShots} (${gamePct}%)<br>Carnival: ${totalCarnGoals}/${totalCarnShots} (${carnPct}%)`;
+        });
+    }
+
+    function recalculateMatchScores() {
+        let us = 0, them = 0;
+        currentMatch.quartersData.forEach(q => {
+            us += (q.gsGoals + q.gaGoals);
+            them += (q.oppGoals || 0);
+        });
+        us += (currentMatch.liveGs.goals + currentMatch.liveGa.goals);
+        them += currentMatch.liveOpponent.goals;
+        currentMatch.matchTotalScore = us;
+        currentMatch.opponentTotalScore = them;
+    }
+
+    function rebuildRunningTotals() {
+        currentMatch.runningGameTotals = {};
+        currentMatch.runningOppTotals = { goals: 0, shots: 0 };
+        currentMatch.quartersData.forEach(q => {
+            if (q.shotHistory && q.shotHistory.length > 0) {
+                q.shotHistory.forEach(shot => {
+                    if (!currentMatch.runningGameTotals[shot.name]) {
+                        currentMatch.runningGameTotals[shot.name] = { goals: 0, shots: 0 };
+                    }
+                    currentMatch.runningGameTotals[shot.name].shots++;
+                    if (shot.isGoal) currentMatch.runningGameTotals[shot.name].goals++;
+                });
+            } else {
+                if(q.gsName) {
+                    if(!currentMatch.runningGameTotals[q.gsName]) currentMatch.runningGameTotals[q.gsName] = { goals: 0, shots: 0 };
+                    currentMatch.runningGameTotals[q.gsName].goals += q.gsGoals;
+                    currentMatch.runningGameTotals[q.gsName].shots += (q.gsGoals + q.gsMisses);
+                }
+                if(q.gaName) {
+                    if(!currentMatch.runningGameTotals[q.gaName]) currentMatch.runningGameTotals[q.gaName] = { goals: 0, shots: 0 };
+                    currentMatch.runningGameTotals[q.gaName].goals += q.gaGoals;
+                    currentMatch.runningGameTotals[q.gaName].shots += (q.gaGoals + q.gaMisses);
+                }
+            }
+            currentMatch.runningOppTotals.goals += q.oppGoals || 0;
+            currentMatch.runningOppTotals.shots += ((q.oppGoals || 0) + (q.oppMisses || 0));
+        });
+    }
+
+    function resetCurrentQuarter() {
+        const activeLiveShots = currentMatch.liveGs.goals + currentMatch.liveGs.misses + 
+                               currentMatch.liveGa.goals + currentMatch.liveGa.misses + 
+                               currentMatch.liveOpponent.goals + currentMatch.liveOpponent.misses;
+
+        if (activeLiveShots === 0) {
+            alert("No stats recorded yet in this quarter to reset.");
+            return;
+        }
+
+        if(confirm(`Are you sure you want to completely discard all live stats currently tracked for Quarter ${currentMatch.currentQuarter}? This cannot be undone.`)) {
+            currentMatch.liveGs = { goals: 0, misses: 0 };
+            currentMatch.liveGa = { goals: 0, misses: 0 };
+            currentMatch.liveOpponent = { goals: 0, misses: 0 };
+            currentMatch.shotHistory = []; 
+            currentMatch.oppShotHistory = [];
+            currentMatch.playByPlay = [];
+            currentMatch.log = [`[RESET] Quarter ${currentMatch.currentQuarter} stats cleared.`];
+            
+            rebuildRunningTotals();
+            recalculateMatchScores();
+            updateLiveUI();
+            updateSetupStatsDisplay();
+        }
+    }
+
+    function resetCurrentGame() {
+        const activeLiveShots = currentMatch.liveGs.goals + currentMatch.liveGs.misses + 
+                               currentMatch.liveGa.goals + currentMatch.liveGa.misses + 
+                               currentMatch.liveOpponent.goals + currentMatch.liveOpponent.misses;
+        const hasQuarters = currentMatch.quartersData.length > 0;
+
+        if (activeLiveShots === 0 && !hasQuarters) {
+            alert("There is no active match data to discard.");
+            return;
+        }
+
+        if(confirm("🚨 WARNING: Are you sure you want to completely discard this entire match? ALL unsaved quarters and live stats will be permanently lost.")) {
+            resetLiveMatch();
+        }
+    }
+
+    function editQuarter(targetQNum) {
+        const activeLiveShots = currentMatch.liveGs.goals + currentMatch.liveGs.misses + 
+                               currentMatch.liveGa.goals + currentMatch.liveGa.misses +
+                               currentMatch.liveOpponent.goals + currentMatch.liveOpponent.misses;
+                               
+        if (activeLiveShots > 0 && currentMatch.currentQuarter !== targetQNum) {
+            if (!confirm(`You have unsaved actions in Quarter ${currentMatch.currentQuarter}. Navigating away will discard them. Proceed?`)) {
+                return;
+            }
+        }
+
+        const qIndex = currentMatch.quartersData.findIndex(q => q.quarterNumber === targetQNum);
+        if (qIndex === -1) {
+            alert("Quarter data not found.");
+            return;
+        }
+
+        const qData = currentMatch.quartersData.splice(qIndex, 1)[0];
+        
+        currentMatch.currentQuarter = targetQNum;
+        currentMatch.liveGs = { goals: qData.gsGoals, misses: qData.gsMisses };
+        currentMatch.liveGa = { goals: qData.gaGoals, misses: qData.gaMisses };
+        currentMatch.liveOpponent = { goals: qData.oppGoals || 0, misses: qData.oppMisses || 0 };
+        
+        currentMatch.shotHistory = qData.shotHistory ? [...qData.shotHistory] : [];
+        currentMatch.oppShotHistory = qData.oppShotHistory ? [...qData.oppShotHistory] : [];
+        currentMatch.playByPlay = qData.playByPlay ? [...qData.playByPlay] : [];
+
+        if (qData.log && qData.log.length > 0) {
+            currentMatch.log = [...qData.log];
+        } else {
+            currentMatch.log = [];
+            let tempUs = 0;
+            let tempOpp = 0;
+            
+            currentMatch.quartersData.forEach(q => {
+                if (q.quarterNumber < targetQNum) {
+                    tempUs += (q.gsGoals + q.gaGoals);
+                    tempOpp += (q.oppGoals || 0);
+                }
+            });
+
+            if (currentMatch.playByPlay.length > 0) {
+                currentMatch.playByPlay.forEach(p => {
+                    if (p.team === 'Us' && p.isGoal) tempUs++;
+                    if (p.team === 'Opp' && p.isGoal) tempOpp++;
+                    
+                    const outcome = p.isGoal ? "scored a Goal" : "missed";
+                    if (p.team === 'Us') {
+                        currentMatch.log.unshift(`[Q${targetQNum}] [${tempUs}-${tempOpp}] ${p.role.toUpperCase()} (${p.actor}) ${outcome}.`);
+                    } else {
+                        const oppNameDisplay = p.actor ? p.actor.trim().toUpperCase() : "OPPONENT";
+                        currentMatch.log.unshift(`[Q${targetQNum}] [${tempUs}-${tempOpp}] <strong>${oppNameDisplay}</strong> ${outcome}.`);
+                    }
+                });
+            }
+        }
+        
+        currentMatch.log.unshift(`[EDIT MODE] Now editing Quarter ${targetQNum}.`);
+
+        rebuildRunningTotals();
+        recalculateMatchScores();
+
+        document.getElementById('select-gs').value = players.includes(qData.gsName) ? qData.gsName : "";
+        document.getElementById('select-ga').value = players.includes(qData.gaName) ? qData.gaName : "";
+        
+        assignShooters(); 
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function recordOppShot(isGoal) {
+        if (isGoal) {
+            currentMatch.liveOpponent.goals++;
+        } else {
+            currentMatch.liveOpponent.misses++;
+        }
+        recalculateMatchScores();
+
+        currentMatch.oppShotHistory.push(isGoal);
+        currentMatch.playByPlay.push({ 
+            team: 'Opp', 
+            actor: currentMatch.opponent || "Opponent", 
+            isGoal: isGoal
+        });
+
+        const outcome = isGoal ? "scored a Goal" : "missed";
+        const oppNameDisplay = currentMatch.opponent ? currentMatch.opponent.trim().toUpperCase() : "OPPONENT";
+        currentMatch.log.unshift(`[Q${currentMatch.currentQuarter}] [${currentMatch.matchTotalScore}-${currentMatch.opponentTotalScore}] <strong>${oppNameDisplay}</strong> ${outcome}.`);
+        
+        updateLiveUI();
+    }
+
+    function undoOppShot() {
+        if (currentMatch.oppShotHistory.length === 0) {
+            if (currentMatch.liveOpponent.goals === 0 && currentMatch.liveOpponent.misses === 0) {
+                alert("No opponent shots to undo in this quarter.");
+                return;
+            }
+            if (confirm(`No exact shot history found for this loaded quarter.\n\nClick OK to remove an OPPONENT GOAL.\nClick Cancel to remove an OPPONENT MISS.`)) {
+                if (currentMatch.liveOpponent.goals > 0) {
+                    currentMatch.liveOpponent.goals--;
+                } else { alert("No opponent goals to remove!"); return; }
+            } else {
+                if (currentMatch.liveOpponent.misses > 0) currentMatch.liveOpponent.misses--;
+                else { alert("No opponent misses to remove!"); return; }
+            }
+            recalculateMatchScores();
+            currentMatch.log.unshift(`[UNDO] [${currentMatch.matchTotalScore}-${currentMatch.opponentTotalScore}] Manually adjusted Opponent stats.`);
+            updateLiveUI();
+            return;
+        }
+
+        const lastShotWasGoal = currentMatch.oppShotHistory.pop();
+        if (lastShotWasGoal) {
+            currentMatch.liveOpponent.goals--;
+        } else {
+            currentMatch.liveOpponent.misses--;
+        }
+        
+        for (let i = currentMatch.playByPlay.length - 1; i >= 0; i--) {
+            if (currentMatch.playByPlay[i].team === 'Opp') {
+                currentMatch.playByPlay.splice(i, 1);
+                break;
+            }
+        }
+
+        recalculateMatchScores();
+        const oppNameDisplay = currentMatch.opponent ? currentMatch.opponent.trim().toUpperCase() : "OPPONENT";
+        currentMatch.log.unshift(`[UNDO] [${currentMatch.matchTotalScore}-${currentMatch.opponentTotalScore}] Removed last <strong>${oppNameDisplay}</strong> shot entry.`);
+        updateLiveUI();
+    }
+
+    function recordShot(role, isGoal) {
+        if ((role === 'gs' && (!currentMatch.gsPlayer || currentMatch.gsPlayer === "Unassigned")) || 
+            (role === 'ga' && (!currentMatch.gaPlayer || currentMatch.gaPlayer === "Unassigned"))) {
+            alert("Please assign a player to this position first!");
+            return;
+        }
+
+        const targetDataObj = role === 'gs' ? currentMatch.liveGs : currentMatch.liveGa;
+        const playerName = role === 'gs' ? currentMatch.gsPlayer : currentMatch.gaPlayer;
+
+        if (isGoal) {
+            targetDataObj.goals++;
+        } else {
+            targetDataObj.misses++;
+        }
+
+        recalculateMatchScores();
+
+        const outcome = isGoal ? "scored a Goal" : "missed";
+        
+        currentMatch.shotHistory.push({ role: role, isGoal: isGoal, name: playerName });
+        currentMatch.playByPlay.push({ 
+            team: 'Us', 
+            actor: playerName, 
+            role: role, 
+            isGoal: isGoal
+        });
+
+        currentMatch.log.unshift(`[Q${currentMatch.currentQuarter}] [${currentMatch.matchTotalScore}-${currentMatch.opponentTotalScore}] ${role.toUpperCase()} (${playerName}) ${outcome}.`);
+
+        updateLiveUI();
+        updateSetupStatsDisplay();
+    }
+
+    function undoShot(role) {
+        let targetIndex = -1;
+        for (let i = currentMatch.shotHistory.length - 1; i >= 0; i--) {
+            if (currentMatch.shotHistory[i].role === role) {
+                targetIndex = i;
+                break;
+            }
+        }
+
+        const targetDataObj = role === 'gs' ? currentMatch.liveGs : currentMatch.liveGa;
+
+        if (targetIndex === -1) {
+            if (targetDataObj.goals === 0 && targetDataObj.misses === 0) {
+                alert(`No shots recorded for ${role.toUpperCase()} in this quarter to undo.`);
+                return;
+            }
+            if (confirm(`No exact shot history found for this loaded quarter.\n\nClick OK to remove a GOAL.\nClick Cancel to remove a MISS.`)) {
+                if (targetDataObj.goals > 0) targetDataObj.goals--;
+                else { alert("No goals to remove!"); return; }
+            } else {
+                if (targetDataObj.misses > 0) targetDataObj.misses--;
+                else { alert("No misses to remove!"); return; }
+            }
+            recalculateMatchScores();
+            currentMatch.log.unshift(`[UNDO] [${currentMatch.matchTotalScore}-${currentMatch.opponentTotalScore}] Manually adjusted ${role.toUpperCase()} stats.`);
+            updateLiveUI();
+            updateSetupStatsDisplay();
+            return;
+        }
+
+        const undoneShot = currentMatch.shotHistory.splice(targetIndex, 1)[0];
+
+        if (undoneShot.isGoal) {
+            targetDataObj.goals--;
+        } else {
+            targetDataObj.misses--;
+        }
+
+        for (let i = currentMatch.playByPlay.length - 1; i >= 0; i--) {
+            if (currentMatch.playByPlay[i].team === 'Us' && currentMatch.playByPlay[i].role === role) {
+                currentMatch.playByPlay.splice(i, 1);
+                break;
+            }
+        }
+
+        recalculateMatchScores();
+        currentMatch.log.unshift(`[UNDO] [${currentMatch.matchTotalScore}-${currentMatch.opponentTotalScore}] Removed last ${role.toUpperCase()} (${undoneShot.name}) shot entry.`);
+        
+        updateLiveUI();
+        updateSetupStatsDisplay();
+    }
+
+    function renderCurrentGameShooterTotals() {
+        const tbody = document.getElementById('current-game-totals-rows');
+        if (!tbody) return;
+
+        let combinedMatchTotals = {};
+        Object.keys(currentMatch.runningGameTotals).forEach(pName => {
+            combinedMatchTotals[pName] = { 
+                goals: currentMatch.runningGameTotals[pName].goals, 
+                shots: currentMatch.runningGameTotals[pName].shots 
+            };
+        });
+
+        if (currentMatch.gsPlayer && currentMatch.gsPlayer !== "Unassigned") {
+            if (!combinedMatchTotals[currentMatch.gsPlayer]) combinedMatchTotals[currentMatch.gsPlayer] = { goals: 0, shots: 0 };
+            combinedMatchTotals[currentMatch.gsPlayer].goals += currentMatch.liveGs.goals;
+            combinedMatchTotals[currentMatch.gsPlayer].shots += (currentMatch.liveGs.goals + currentMatch.liveGs.misses);
+        }
+        if (currentMatch.gaPlayer && currentMatch.gaPlayer !== "Unassigned") {
+            if (!combinedMatchTotals[currentMatch.gaPlayer]) combinedMatchTotals[currentMatch.gaPlayer] = { goals: 0, shots: 0 };
+            combinedMatchTotals[currentMatch.gaPlayer].goals += currentMatch.liveGa.goals;
+            combinedMatchTotals[currentMatch.gaPlayer].shots += (currentMatch.liveGa.goals + currentMatch.liveGa.misses);
+        }
+
+        const activeShooters = Object.keys(combinedMatchTotals).filter(pName => combinedMatchTotals[pName].shots > 0);
+
+        if (activeShooters.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#999;">No shooters have taken a shot yet this game.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = activeShooters.map(pName => {
+            const data = combinedMatchTotals[pName];
+            const accuracy = Math.round((data.goals / data.shots) * 100) || 0;
+            return `
+                <tr>
+                    <td><strong>${pName}</strong></td>
+                    <td>${data.goals} / ${data.shots}</td>
+                    <td><b style="color:var(--warning);">${accuracy}%</b></td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    function updateLiveUI() {
+        document.getElementById('team-total').innerText = currentMatch.matchTotalScore;
+        document.getElementById('opp-total').innerText = currentMatch.opponentTotalScore;
+        
+        const displayMatchTeam = document.getElementById('display-match-team');
+        if(displayMatchTeam) displayMatchTeam.innerText = currentMatch.ourTeam ? currentMatch.ourTeam.trim() : "Our Team";
+
+        const displayMatchOpp = document.getElementById('display-match-opp');
+        if(displayMatchOpp) displayMatchOpp.innerText = currentMatch.opponent ? currentMatch.opponent.trim() : "???";
+
+        const usMatchWrapper = document.getElementById('match-us-wrapper');
+        const oppMatchWrapper = document.getElementById('match-opp-wrapper');
+        
+        if (usMatchWrapper && oppMatchWrapper) {
+            if (currentMatch.matchTotalScore > currentMatch.opponentTotalScore) {
+                usMatchWrapper.style.fontWeight = "900";
+                oppMatchWrapper.style.fontWeight = "normal";
+            } else if (currentMatch.opponentTotalScore > currentMatch.matchTotalScore) {
+                usMatchWrapper.style.fontWeight = "normal";
+                oppMatchWrapper.style.fontWeight = "900";
+            } else {
+                usMatchWrapper.style.fontWeight = "normal";
+                oppMatchWrapper.style.fontWeight = "normal";
+            }
+        }
+
+        const activeQLabel = document.getElementById('active-q-label');
+        if (currentMatch.currentQuarter >= 5) {
+            if (activeQLabel) activeQLabel.innerText = "(Final Score Locked)";
+        } else {
+            if (activeQLabel) activeQLabel.innerText = `(Q${currentMatch.currentQuarter} Running)`;
+        }
+
+        for (let qNum = 1; qNum <= 4; qNum++) {
+            const bannerEl = document.getElementById(`banner-q${qNum}`);
+            if (!bannerEl) continue;
+            const qSavedData = currentMatch.quartersData.find(q => q.quarterNumber === qNum);
+            
+            if (qSavedData) {
+                const totalUsQuarterGoals = qSavedData.gsGoals + qSavedData.gaGoals;
+                const oppQuarterGoals = qSavedData.oppGoals || 0;
+                
+                const teamName = currentMatch.ourTeam ? currentMatch.ourTeam.trim() : "Our Team";
+                const oppName = currentMatch.opponent ? currentMatch.opponent.trim() : "Opponent";
+
+                let usString = `${teamName} ${totalUsQuarterGoals}`;
+                let oppString = `${oppName} ${oppQuarterGoals}`;
+
+                if (totalUsQuarterGoals > oppQuarterGoals) {
+                    usString = `<strong>${usString}</strong>`;
+                } else if (oppQuarterGoals > totalUsQuarterGoals) {
+                    oppString = `<strong>${oppString}</strong>`;
+                }
+
+                // Dropdown layout features clean gray highlights to keep splitting blocks well-aligned across mobile layouts
+                bannerEl.innerHTML = `<div style="background: #334155; color: #fff; padding: 6px 12px; margin: 4px 0; border-radius: 4px; width: 100%; box-sizing: border-box; display: flex; justify-content: space-between; align-items: center;"><span>Q${qNum}: ${usString} - ${oppString}</span> <button onclick="editQuarter(${qNum})" style="padding:2px 8px; font-size:0.75rem; border-radius:4px; border:none; background:#f59e0b; color:white; font-weight:bold; cursor:pointer;">✏️ Edit</button></div>`;
+                bannerEl.style.opacity = "1";
+            } else if (currentMatch.currentQuarter === qNum) {
+                bannerEl.innerHTML = `<div style="background: rgba(30, 41, 59, 0.05); color: #1e293b; padding: 6px 12px; margin: 4px 0; border-radius: 4px; width: 100%; text-align: center; font-weight: 500; border: 1px dashed rgba(30, 41, 59, 0.2)">Q${qNum}: Live Action...</div>`;
+                bannerEl.style.opacity = "1";
+            } else {
+                bannerEl.innerHTML = `<div style="color: #64748b; padding: 4px 12px; text-align: center;">Q${qNum}: --</div>`;
+                bannerEl.style.opacity = "0.4";
+            }
+        }
+
+        ['gs', 'ga'].forEach(role => {
+            const pName = currentMatch[role + 'Player'];
+            
+            if (!pName || pName === "Unassigned") {
+                document.getElementById(`pct-${role}`).innerText = "0%";
+                document.getElementById(`raw-${role}`).innerHTML = "Quarter: 0/0 (0%)<br>Game: 0/0 (0%)";
+                document.getElementById(`carn-${role}-line`).innerText = "Carnival Overall: 0%";
+                return;
+            }
+
+            let playerLiveGoals = 0;
+            let playerLiveMisses = 0;
+            currentMatch.shotHistory.forEach(shot => {
+                if (shot.name === pName) {
+                    if (shot.isGoal) playerLiveGoals++;
+                    else playerLiveMisses++;
+                }
+            });
+
+            const playerQuarterShots = playerLiveGoals + playerLiveMisses;
+            const quarterPct = playerQuarterShots > 0 ? Math.round((playerLiveGoals / playerQuarterShots) * 100) : 0;
+            document.getElementById(`pct-${role}`).innerText = `${quarterPct}%`;
+
+            const gameData = currentMatch.runningGameTotals[pName] || { goals: 0, shots: 0 };
+            const gameGoals = gameData.goals + playerLiveGoals;
+            const gameShots = gameData.shots + playerLiveGoals + playerLiveMisses;
+            const gamePct = gameShots > 0 ? Math.round((gameGoals / gameShots) * 100) : 0;
+            
+            document.getElementById(`raw-${role}`).innerHTML = `Quarter: ${playerLiveGoals}/${playerQuarterShots} (${quarterPct}%)<br>Game: ${gameGoals}/${gameShots} (${gamePct}%)`;
+
+            const carnData = individualStatsCache[pName] || { goals: 0, shots: 0 };
+            const totalCarnGoals = carnData.goals + playerLiveGoals;
+            const totalCarnShots = carnData.shots + playerLiveGoals + playerLiveMisses;
+            const carnPct = totalCarnShots > 0 ? Math.round((totalCarnGoals / totalCarnShots) * 100) : 0;
+            document.getElementById(`carn-${role}-line`).innerText = `Carnival Overall: ${carnPct}% (${totalCarnGoals}/${totalCarnShots})`;
+        });
+
+        const oppLiveShots = currentMatch.liveOpponent.goals + currentMatch.liveOpponent.misses;
+        const oppQuarterPct = oppLiveShots > 0 ? Math.round((currentMatch.liveOpponent.goals / oppLiveShots) * 100) : 0;
+        document.getElementById('pct-opp').innerText = `${oppQuarterPct}%`;
+
+        const totalOppGoals = currentMatch.runningOppTotals.goals + currentMatch.liveOpponent.goals;
+        const totalOppShots = currentMatch.runningOppTotals.shots + oppLiveShots;
+        const oppGamePct = totalOppShots > 0 ? Math.round((totalOppGoals / totalOppShots) * 100) : 0;
+        
+        document.getElementById('raw-opp').innerHTML = `Quarter: ${currentMatch.liveOpponent.goals}/${oppLiveShots} (${oppQuarterPct}%)<br>Game: ${totalOppGoals}/${totalOppShots} (${oppGamePct}%)`;
+
+        document.getElementById('live-log').innerHTML = currentMatch.log.length ? currentMatch.log.join('<br>') : "Current quarter actions...";
+        
+        const qBtn = document.getElementById('quarter-btn');
+        const qResetBtn = document.getElementById('quarter-reset-btn');
+        if (currentMatch.currentQuarter >= 5) {
+            qBtn.style.display = "none";
+            qResetBtn.style.display = "none";
+        } else {
+            qBtn.style.display = "block";
+            qResetBtn.style.display = "block";
+            qBtn.innerText = `⏱️ End Quarter ${currentMatch.currentQuarter}`;
+        }
+
+        renderCurrentGameShooterTotals();
+        calculateCarnivalTotals();
+    }
+
+    function forceSaveCurrentQuarter() {
+        currentMatch.quartersData.push({
+            quarterNumber: currentMatch.currentQuarter,
+            gsName: currentMatch.gsPlayer, 
+            gaName: currentMatch.gaPlayer, 
+            gsGoals: currentMatch.liveGs.goals, 
+            gsMisses: currentMatch.liveGs.misses,
+            gaGoals: currentMatch.liveGa.goals,
+            gaMisses: currentMatch.liveGa.misses,
+            oppGoals: currentMatch.liveOpponent.goals,
+            oppMisses: currentMatch.liveOpponent.misses,
+            shotHistory: [...currentMatch.shotHistory],
+            oppShotHistory: [...currentMatch.oppShotHistory],
+            playByPlay: [...(currentMatch.playByPlay || [])],
+            log: [...(currentMatch.log || [])]
+        });
+        currentMatch.quartersData.sort((a, b) => a.quarterNumber - b.quarterNumber);
+        
+        currentMatch.liveGs = { goals: 0, misses: 0 };
+        currentMatch.liveGa = { goals: 0, misses: 0 };
+        currentMatch.liveOpponent = { goals: 0, misses: 0 };
+        currentMatch.shotHistory = []; 
+        currentMatch.oppShotHistory = [];
+        currentMatch.playByPlay = [];
+        currentMatch.log = []; 
+        
+        rebuildRunningTotals();
+        recalculateMatchScores();
+    }
+
+    function endQuarter() {
+        if (currentMatch.currentQuarter >= 5) return;
+
+        const totalQuarterActions = currentMatch.liveGs.goals + currentMatch.liveGs.misses + 
+                                   currentMatch.liveGa.goals + currentMatch.liveGa.misses + 
+                                   currentMatch.liveOpponent.goals + currentMatch.liveOpponent.misses;
+
+        if (totalQuarterActions === 0) {
+            if(!confirm("No stats recorded this quarter. End quarter anyway?")) return;
+        }
+
+        if(confirm(`Confirm ending Quarter ${currentMatch.currentQuarter}? Stats will save to this segment.`)) {
+            forceSaveCurrentQuarter();
+            
+            let nextQ = 1;
+            const savedQNums = currentMatch.quartersData.map(q => q.quarterNumber);
+            while(savedQNums.includes(nextQ)) {
+                nextQ++;
+            }
+            currentMatch.currentQuarter = nextQ; 
+            
+            if (currentMatch.currentQuarter >= 5) {
+                alert("All 4 quarters complete! You can now Save & Finalise Match, or click Edit to modify previous quarters.");
+            } else {
+                alert(`Quarter complete! Change shooters if needed, then continue scoring Quarter ${currentMatch.currentQuarter}.`);
+            }
+            
+            updateLiveUI();
+            updateSetupStatsDisplay();
+        }
+    }
+
+    function calculateCarnivalTotals() {
+        let cumulativeGoals = 0;
+        let cumulativeMisses = 0;
+
+        individualStatsCache = {};
+        players.forEach(p => {
+            individualStatsCache[p] = { goals: 0, shots: 0 };
+        });
+
+        carnivalHistory.forEach(match => {
+            cumulativeGoals += match.teamScore;
+            if(match.quartersBreakdown) {
+                match.quartersBreakdown.forEach(q => {
+                    cumulativeMisses += (q.gsMisses || 0) + (q.gaMisses || 0);
+
+                    if (q.shotHistory && q.shotHistory.length > 0) {
+                        q.shotHistory.forEach(shot => {
+                            if (shot.name && individualStatsCache[shot.name]) {
+                                individualStatsCache[shot.name].shots++;
+                                if (shot.isGoal) individualStatsCache[shot.name].goals++;
+                            }
+                        });
+                    } else {
+                        if(q.gsName && individualStatsCache[q.gsName]) {
+                            individualStatsCache[q.gsName].goals += q.gsGoals || 0;
+                            individualStatsCache[q.gsName].shots += (q.gsGoals || 0) + (q.gsMisses || 0);
+                        }
+                        if(q.gaName && individualStatsCache[q.gaName]) {
+                            individualStatsCache[q.gaName].goals += q.gaGoals || 0;
+                            individualStatsCache[q.gaName].shots += (q.gaGoals || 0) + (q.gaMisses || 0);
+                        }
+                    }
+                });
+            }
+        });
+
+        let liveMatchGoalsAddition = 0;
+        let liveMatchMissesAddition = 0;
+        let activeMatchPlayerCache = {};
+        
+        currentMatch.quartersData.forEach(q => {
+            if (q.shotHistory && q.shotHistory.length > 0) {
+                q.shotHistory.forEach(shot => {
+                    if (!activeMatchPlayerCache[shot.name]) activeMatchPlayerCache[shot.name] = { goals: 0, shots: 0 };
+                    activeMatchPlayerCache[shot.name].shots++;
+                    if (shot.isGoal) activeMatchPlayerCache[shot.name].goals++;
+                });
+            } else {
+                if (q.gsName) {
+                    if (!activeMatchPlayerCache[q.gsName]) activeMatchPlayerCache[q.gsName] = { goals: 0, shots: 0 };
+                    activeMatchPlayerCache[q.gsName].goals += q.gsGoals || 0;
+                    activeMatchPlayerCache[q.gsName].shots += (q.gsGoals || 0) + (q.gsMisses || 0);
+                }
+                if (q.gaName) {
+                    if (!activeMatchPlayerCache[q.gaName]) activeMatchPlayerCache[q.gaName] = { goals: 0, shots: 0 };
+                    activeMatchPlayerCache[q.gaName].goals += q.gaGoals || 0;
+                    activeMatchPlayerCache[q.gaName].shots += (q.gaGoals || 0) + (q.gaMisses || 0);
+                }
+            }
+        });
+
+        if (currentMatch.gsPlayer && currentMatch.gsPlayer !== "Unassigned") {
+            if (!activeMatchPlayerCache[currentMatch.gsPlayer]) activeMatchPlayerCache[currentMatch.gsPlayer] = { goals: 0, shots: 0 };
+            activeMatchPlayerCache[currentMatch.gsPlayer].goals += currentMatch.liveGs.goals;
+            activeMatchPlayerCache[currentMatch.gsPlayer].shots += (currentMatch.liveGs.goals + currentMatch.liveGs.misses);
+        }
+        if (currentMatch.gaPlayer && currentMatch.gaPlayer !== "Unassigned") {
+            if (!activeMatchPlayerCache[currentMatch.gaPlayer]) activeMatchPlayerCache[currentMatch.gaPlayer] = { goals: 0, shots: 0 };
+            activeMatchPlayerCache[currentMatch.gaPlayer].goals += currentMatch.liveGa.goals;
+            activeMatchPlayerCache[currentMatch.gaPlayer].shots += (currentMatch.liveGa.goals + currentMatch.liveGa.misses);
+        }
+
+        Object.keys(activeMatchPlayerCache).forEach(pName => {
+            const data = activeMatchPlayerCache[pName];
+            liveMatchGoalsAddition += data.goals;
+            liveMatchMissesAddition += (data.shots - data.goals);
+            
+            if (individualStatsCache[pName]) {
+                individualStatsCache[pName].goals += data.goals;
+                individualStatsCache[pName].shots += data.shots;
+            }
+        });
+
+        const netGoals = cumulativeGoals + liveMatchGoalsAddition;
+        const netMisses = cumulativeMisses + liveMatchMissesAddition;
+        const netShots = netGoals + netMisses;
+        const combinedPct = netShots > 0 ? Math.round((netGoals / netShots) * 100) : 0;
+
+        document.getElementById('tot-goals').innerText = netGoals;
+        document.getElementById('tot-misses').innerText = netMisses;
+        document.getElementById('tot-pct').innerText = `${combinedPct}%`;
+
+        const playerTbody = document.getElementById('player-totals-rows');
+        if (players.length === 0) {
+            playerTbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#999;">No players in roster.</td></tr>`;
+            return;
+        }
+
+        playerTbody.innerHTML = players.map(p => {
+            const stats = individualStatsCache[p] || { goals: 0, shots: 0 };
+            const accuracy = stats.shots > 0 ? Math.round((stats.goals / stats.shots) * 100) : 0;
+            return `
+                <tr>
+                    <td><strong>${p}</strong></td>
+                    <td>${stats.goals} / ${stats.shots}</td>
+                    <td><b style="color:var(--primary);">${accuracy}%</b></td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    function getMatchPlayerStats(quartersBreakdown) {
+        let matchPlayerStats = {};
+        quartersBreakdown.forEach(q => {
+            if (q.shotHistory && q.shotHistory.length > 0) {
+                q.shotHistory.forEach(shot => {
+                    if (!matchPlayerStats[shot.name]) matchPlayerStats[shot.name] = { goals: 0, shots: 0 };
+                    matchPlayerStats[shot.name].shots++;
+                    if (shot.isGoal) matchPlayerStats[shot.name].goals++;
+                });
+            } else {
+                if (q.gsName) {
+                    if (!matchPlayerStats[q.gsName]) matchPlayerStats[q.gsName] = { goals: 0, shots: 0 };
+                    matchPlayerStats[q.gsName].goals += q.gsGoals || 0;
+                    matchPlayerStats[q.gsName].shots += (q.gsGoals || 0) + (q.gsMisses || 0);
+                }
+                if (q.gaName) {
+                    if (!matchPlayerStats[q.gaName]) matchPlayerStats[q.gaName] = { goals: 0, shots: 0 };
+                    matchPlayerStats[q.gaName].goals += q.gaGoals || 0;
+                    matchPlayerStats[q.gaName].shots += (q.gaGoals || 0) + (q.gaMisses || 0);
+                }
+            }
+        });
+        return matchPlayerStats;
+    }
+
+    function getQuarterPlayerStats(q) {
+        let qPlayerStats = {};
+        if (q.shotHistory && q.shotHistory.length > 0) {
+            q.shotHistory.forEach(shot => {
+                if (!qPlayerStats[shot.name]) qPlayerStats[shot.name] = { goals: 0, shots: 0 };
+                qPlayerStats[shot.name].shots++;
+                if (shot.isGoal) qPlayerStats[shot.name].goals++;
+            });
+        } else {
+            if (q.gsName && ((q.gsGoals || 0) + (q.gsMisses || 0) > 0)) {
+                qPlayerStats[q.gsName] = { goals: q.gsGoals, shots: q.gsGoals + q.gsMisses };
+            }
+            if (q.gaName && ((q.gaGoals || 0) + (q.gaMisses || 0) > 0)) {
+                if (!qPlayerStats[q.gaName]) qPlayerStats[q.gaName] = { goals: 0, shots: 0 };
+                qPlayerStats[q.gaName].goals += q.gaGoals;
+                qPlayerStats[q.gaName].shots += (q.gaGoals + q.gaMisses);
+            }
+        }
+        return qPlayerStats;
+    }
+
+    function generateCleanExportText(teamName, opponent, teamScore, oppScore, quartersBreakdown, options) {
+        const cleanTeam = teamName ? teamName.trim() : "Team";
+        const cleanOpp = opponent ? opponent.trim() : "Opponent";
+        let winStatus = teamScore > oppScore ? "def" : (teamScore < oppScore ? "def by" : "drew with");
+        let header = `MATCH RESULT\n*${cleanTeam}* ${teamScore} ${winStatus} *${cleanOpp}* ${oppScore}\n\n`;
+
+        let totalsText = "";
+        if (options.includeTotals) {
+            const matchStats = getMatchPlayerStats(quartersBreakdown);
+            let matchSummaryText = Object.keys(matchStats).map(p => {
+                let s = matchStats[p];
+                let pct = s.shots > 0 ? Math.round((s.goals/s.shots)*100) : 0;
+                return `👤 ${p}: ${s.goals}/${s.shots} (${pct}%)`;
+            }).join('\n');
+            totalsText = `🎯 SHOOTING TOTALS\n${matchSummaryText || "No stats recorded"}\n\n`;
+        }
+
+        let qText = "";
+        if (options.includeQuarters) {
+            qText = `📊 QUARTER BREAKDOWN\n`;
+            quartersBreakdown.forEach(q => {
+                let usQScore = 0;
+                let oppQScore = q.oppGoals || 0;
+                const qStats = getQuarterPlayerStats(q);
+                let playerTexts = [];
+                Object.keys(qStats).forEach(p => {
+                    let s = qStats[p];
+                    usQScore += s.goals;
+                    let pct = s.shots > 0 ? Math.round((s.goals/s.shots)*100) : 0;
+                    playerTexts.push(`${p} ${s.goals}/${s.shots} (${pct}%)`);
+                });
+                qText += `🔹 Q${q.quarterNumber}: ${cleanTeam} ${usQScore} - *${cleanOpp}* ${oppQScore}\n`;
+                if (playerTexts.length > 0) {
+                    qText += `   ↳ ${playerTexts.join(', ')}\n`;
+                } else {
+                    qText += `   ↳ No shots recorded\n`;
+                }
+            });
+            qText += "\n";
+        }
+
+        let pbpText = "";
+        if (options.includePBP) {
+            pbpText = `📝 PLAY-BY-PLAY\n`;
+            let hasData = false;
+            let runningUs = 0;
+            let runningOpp = 0;
+
+            quartersBreakdown.forEach(q => {
+                if (q.playByPlay && q.playByPlay.length > 0) {
+                    hasData = true;
+                    pbpText += `[ Q${q.quarterNumber} ]\n`;
+                    q.playByPlay.forEach(p => {
+                        if (p.team === 'Us' && p.isGoal) runningUs++;
+                        if (p.team === 'Opp' && p.isGoal) runningOpp++;
+                        const action = p.isGoal ? "🟢 Goal" : "🔴 Miss";
+                        const actorClean = p.actor ? p.actor.trim() : "Unknown";
+                        pbpText += `[${runningUs}-${runningOpp}] *${actorClean}*: ${action}\n`;
+                    });
+                    pbpText += `\n`;
+                } else {
+                    runningUs += (q.gsGoals || 0) + (q.gaGoals || 0);
+                    runningOpp += (q.oppGoals || 0);
+                }
+            });
+            if (!hasData) pbpText += "No detailed play-by-play recorded.\n";
+        }
+
+        return header + totalsText + qText + pbpText;
+    }
+
+    function exportToCSV() {
+        if (carnivalHistory.length === 0) {
+            alert("No carnival history to export. Play and save a match first!");
+            return;
+        }
+
+        let csvContent = "data:text/csv;charset=utf-8,";
+        csvContent += "Match Number,Our Team,Opponent,Quarter,Team Qtr Goals,Opp Qtr Goals,Player Name,Position,Player Qtr Goals,Player Qtr Misses,Total Qtr Shots,Accuracy %\n";
+
+        carnivalHistory.forEach((m, mIndex) => {
+            const matchName = `Match ${mIndex + 1}`;
+            const team = m.ourTeam ? m.ourTeam.trim() : "Our Team";
+            const opp = m.opponent ? m.opponent.trim() : "Opponent";
+
+            if (m.quartersBreakdown) {
+                m.quartersBreakdown.forEach(q => {
+                    const qNum = q.quarterNumber;
+                    const qStats = getQuarterPlayerStats(q);
+                    let hasUsData = false;
+
+                    Object.keys(qStats).forEach(playerName => {
+                        hasUsData = true;
+                        let s = qStats[playerName];
+                        let pos = "Unknown";
+                        if (q.gsName === playerName) pos = "GS";
+                        if (q.gaName === playerName) pos = "GA";
+                        let misses = s.shots - s.goals;
+                        let pct = s.shots > 0 ? Math.round((s.goals / s.shots) * 100) : 0;
+                        csvContent += `"${matchName}","${team}","${opp}",${qNum},${s.goals},${q.oppGoals || 0},"${playerName}","${pos}",${s.goals},${misses},${s.shots},${pct}%\n`;
+                    });
+
+                    if (!hasUsData && (q.oppGoals || 0) > 0) {
+                        csvContent += `"${matchName}","${team}","${opp}",${qNum},0,${q.oppGoals || 0},"No Data","-",0,0,0,0%\n`;
+                    }
+                });
+            }
+        });
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "Netball_Carnival_Data_Export.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    async function pushSingleGameToSheets(index) {
+        const m = carnivalHistory[index];
+        if (!m) return;
+
+        let exportData = []; 
+        const matchName = `Match ${index + 1}`;
+        const team = m.ourTeam ? m.ourTeam.trim() : "Our Team";
+        const opp = m.opponent ? m.opponent.trim() : "Opponent";
+
+        if (m.quartersBreakdown) {
+            m.quartersBreakdown.forEach(q => {
+                const qNum = q.quarterNumber;
+                const qStats = getQuarterPlayerStats(q);
+                let hasUsData = false;
+
+                Object.keys(qStats).forEach(playerName => {
+                    hasUsData = true;
+                    let s = qStats[playerName];
+                    let pos = "Unknown";
+                    if (q.gsName === playerName) pos = "GS";
+                    if (q.gaName === playerName) pos = "GA";
+                    let misses = s.shots - s.goals;
+                    let pct = s.shots > 0 ? Math.round((s.goals / s.shots) * 100) : 0;
+                    exportData.push([matchName, team, opp, qNum, s.goals, q.oppGoals || 0, playerName, pos, s.goals, misses, s.shots, `${pct}%`]);
+                });
+
+                if (!hasUsData && (q.oppGoals || 0) > 0) {
+                    exportData.push([matchName, team, opp, qNum, 0, q.oppGoals || 0, "No Data", "-", 0, 0, 0, "0%"]);
+                }
+            });
+        }
+
+        if (exportData.length === 0) {
+            alert("No stats found in this match to push.");
+            return;
+        }
+
+        const btn = document.getElementById(`btn-push-${index}`);
+        const originalText = btn.innerText;
+        btn.innerText = "⏳ Pushing...";
+        btn.disabled = true;
+
+        try {
+            await fetch(GOOGLE_SHEETS_URL, {
+                method: 'POST',
+                body: JSON.stringify(exportData),
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+            });
+            alert(`✅ Successfully pushed ${team} vs ${opp} to Google Sheets!`);
+        } catch (e) {
+            alert("❌ Push Failed. Please ensure your Web App is deployed and 'Anyone' has access to it.");
+            console.error(e);
+        } finally {
+            btn.innerText = originalText;
+            btn.disabled = false;
+        }
+    }
+
+    function openShareModal(matchData, isNewSave = false) {
+        pendingShareContext = { matchData, isNewSave };
+        document.getElementById('share-modal').style.display = 'flex';
+    }
+
+    function closeShareModal() {
+        document.getElementById('share-modal').style.display = 'none';
+        if (pendingShareContext && pendingShareContext.isNewSave) resetLiveMatch();
+        pendingShareContext = null;
+    }
+
+    function executeShare() {
+        if (!pendingShareContext) return;
+        const options = {
+            includeTotals: document.getElementById('chk-totals').checked,
+            includeQuarters: document.getElementById('chk-quarters').checked,
+            includePBP: document.getElementById('chk-pbp').checked
+        };
+        const m = pendingShareContext.matchData;
+        const teamLabel = m.ourTeam || "Our Team";
+        const wasNewSave = pendingShareContext.isNewSave;
+
+        const shareText = generateCleanExportText(
+            teamLabel, 
+            m.opponent, 
+            m.teamScore || m.matchTotalScore, 
+            m.opponentScore || m.opponentTotalScore || 0, 
+            m.quartersBreakdown || m.quartersData, 
+            options
+        );
+
+        document.getElementById('share-modal').style.display = 'none';
+        pendingShareContext = null;
+        shareResult(shareText);
+        if (wasNewSave) setTimeout(() => { resetLiveMatch(); }, 100);
+    }
+
+    function saveMatch() {
+        if (!currentMatch.opponent || currentMatch.opponent.trim() === "???") {
+            alert("Please enter an Opponent Team name before saving.");
+            return;
+        }
+
+        const activeLiveShots = currentMatch.liveGs.goals + currentMatch.liveGs.misses + 
+                               currentMatch.liveGa.goals + currentMatch.liveGa.misses + 
+                               currentMatch.liveOpponent.goals + currentMatch.liveOpponent.misses;
+
+        if (activeLiveShots > 0 && currentMatch.currentQuarter <= 4) {
+            if (confirm(`You have active stats in Quarter ${currentMatch.currentQuarter}. Save this quarter and finalise the match?`)) {
+                forceSaveCurrentQuarter();
+            } else {
+                return;
+            }
+        } else if (currentMatch.quartersData.length === 0) {
+            alert("Cannot finalize a game with no stats recorded.");
+            return;
+        }
+
+        if (confirm(`Do you want to finalize and save this game against ${currentMatch.opponent.trim()}?`)) {
+            const matchData = {
+                ourTeam: currentMatch.ourTeam,
+                opponent: currentMatch.opponent,
+                teamScore: currentMatch.matchTotalScore,
+                opponentScore: currentMatch.opponentTotalScore,
+                quartersBreakdown: currentMatch.quartersData
+            };
+            carnivalHistory.push(matchData);
+            localStorage.setItem('netball_history', JSON.stringify(carnivalHistory));
+            renderHistory();
+            calculateCarnivalTotals();
+            openShareModal(matchData, true);
+        }
+    }
+
+    function editSavedMatch(index) {
+        const activeLiveShots = currentMatch.liveGs.goals + currentMatch.liveGs.misses + 
+                               currentMatch.liveGa.goals + currentMatch.liveGa.misses +
+                               currentMatch.liveOpponent.goals + currentMatch.liveOpponent.misses;
+                               
+        if (activeLiveShots > 0 || currentMatch.quartersData.length > 0) {
+            if (!confirm("Warning: Loading this game will discard your active data. Proceed?")) { return; }
+        }
+
+        const matchToEdit = carnivalHistory[index];
+        currentMatch.ourTeam = matchToEdit.ourTeam || localStorage.getItem('netball_our_team_name') || "Our Team";
+        currentMatch.opponent = matchToEdit.opponent;
+        currentMatch.quartersData = JSON.parse(JSON.stringify(matchToEdit.quartersBreakdown));
+        
+        let nextQ = 1;
+        const savedQNums = currentMatch.quartersData.map(q => q.quarterNumber);
+        while(savedQNums.includes(nextQ)) nextQ++;
+        currentMatch.currentQuarter = nextQ;
+        
+        currentMatch.liveGs = { goals: 0, misses: 0 };
+        currentMatch.liveGa = { goals: 0, misses: 0 };
+        currentMatch.liveOpponent = { goals: 0, misses: 0 };
+        currentMatch.shotHistory = [];
+        currentMatch.oppShotHistory = [];
+        currentMatch.playByPlay = [];
+        currentMatch.log = [`[EDIT MODE] Loaded match vs ${currentMatch.opponent.trim()}. Click a Quarter's Edit button above to modify stats.`];
+
+        rebuildRunningTotals();
+        recalculateMatchScores();
+
+        document.getElementById('our-team-name').value = currentMatch.ourTeam === "Our Team" ? "" : currentMatch.ourTeam;
+        document.getElementById('display-our-team').innerText = currentMatch.ourTeam;
+        document.getElementById('opponent-name').value = currentMatch.opponent;
+        document.getElementById('display-opp').innerText = currentMatch.opponent;
+        document.getElementById('opp-card-title').innerHTML = `<strong>${currentMatch.opponent.trim()}</strong>`;
+        
+        carnivalHistory.splice(index, 1);
+        localStorage.setItem('netball_history', JSON.stringify(carnivalHistory));
+        
+        clearDropdownSelectors();
+        currentMatch.gsPlayer = "Unassigned";
+        currentMatch.gaPlayer = "Unassigned";
+
+        renderHistory();
+        calculateCarnivalTotals();
+        updateLiveUI();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function shareResult(textToShare) {
+        if (navigator.share) {
+            navigator.share({ title: 'Netball Match Summary', text: textToShare })
+            .catch(() => {
+                navigator.clipboard.writeText(textToShare);
+                alert("Share window closed. Match report copied to clipboard instead!");
+            });
+        } else {
+            navigator.clipboard.writeText(textToShare).then(() => {
+                alert("Stats copied to clipboard! Ready to paste into Messages/Messenger.");
+            });
+        }
+    }
+
+    function sharePastMatch(index) {
+        const m = carnivalHistory[index];
+        openShareModal(m, false);
+    }
+
+    function renderHistory() {
+        const container = document.getElementById('history-rows-container');
+        if (carnivalHistory.length === 0) {
+            container.innerHTML = `<div style="text-align:center; color:#999; padding: 20px;">No saved matches yet.</div>`;
+            return;
+        }
+
+        container.innerHTML = carnivalHistory.map((m, index) => {
+            let teamLabel = m.ourTeam || "Our Team";
+            const cleanOppName = m.opponent ? m.opponent.trim() : "Opponent";
+            
+            const matchStats = getMatchPlayerStats(m.quartersBreakdown || []);
+            const matchSummaryHtml = Object.keys(matchStats).map(p => {
+                let s = matchStats[p];
+                let pct = s.shots > 0 ? Math.round((s.goals/s.shots)*100) : 0;
+                return `<div><strong>👤 ${p}:</strong> ${s.goals}/${s.shots} (${pct}%)</div>`;
+            }).join('') || "<div>No player stats recorded.</div>";
+            
+            let qBreakdownHtml = "";
+            if (m.quartersBreakdown) {
+                qBreakdownHtml = m.quartersBreakdown.map(q => {
+                    const qStats = getQuarterPlayerStats(q);
+                    const qHtml = Object.keys(qStats).map(p => {
+                        let s = qStats[p];
+                        let pct = s.shots > 0 ? Math.round((s.goals/s.shots)*100) : 0;
+                        return `${p}: ${s.goals}/${s.shots} (${pct}%)`;
+                    }).join('<br>') || "No shots recorded";
+
+                    return `
+                        <div style="margin-bottom: 8px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 6px;">
+                            <strong style="color:var(--primary);">Q${q.quarterNumber}</strong><br>
+                            ${qHtml}<br>
+                            <span style="color:#64748b; font-size: 0.8rem;"><strong>${cleanOppName}</strong>: ${q.oppGoals || 0} Goals</span>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            return `
+                <div class="history-card">
+                    <div class="history-card-header">
+                        <h4 style="margin: 0; color: #334155; font-size: 1.1rem; text-align: left;">${teamLabel} vs <strong>${cleanOppName}</strong></h4>
+                        <div class="history-score">${m.teamScore} - ${m.opponentScore || 0}</div>
+                    </div>
+                    
+                    <div style="font-size: 0.9rem; color: #475569; margin-bottom: 5px; line-height: 1.4; text-align: left;">
+                        ${matchSummaryHtml}
+                    </div>
+                    
+                    <div class="scrollable-quarter-data" style="text-align: left;">
+                        ${qBreakdownHtml}
+                    </div>
+
+                    <div class="history-actions">
+                        <button class="btn-edit-action" onclick="editSavedMatch(${index})">✏️ Edit</button>
+                        <button class="btn-row-share" onclick="sharePastMatch(${index})">📢 Share</button>
+                        <button class="btn-sheets-row" id="btn-push-${index}" onclick="pushSingleGameToSheets(${index})">☁️ Push</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function shareCarnivalTotals() {
+        const titleText = localStorage.getItem('netball_carnival_name') || "Netball Carnival";
+        const totalGoals = document.getElementById('tot-goals').innerText;
+        const totalMisses = document.getElementById('tot-misses').innerText;
+        const overallPct = document.getElementById('tot-pct').innerText;
+
+        let shareMessage = `🏆 CARNIVAL FINAL REPORT 🏆\n📍 ${titleText}\n\n📊 TEAM STATS\nGoals: ${totalGoals}\nMisses: ${totalMisses}\nAccuracy: ${overallPct}\n\n🎯 SHOOTER SUMMARY\n`;
+        players.forEach(p => {
+            const stats = individualStatsCache[p] || { goals: 0, shots: 0 };
+            const accuracy = stats.shots > 0 ? Math.round((stats.goals / stats.shots) * 100) : 0;
+            if(stats.shots > 0) shareMessage += `👤 ${p}: ${stats.goals}/${stats.shots} (${accuracy}%)\n`;
+        });
+        shareResult(shareMessage);
+    }
+
+    function resetLiveMatch() {
+        const persistentTeamName = localStorage.getItem('netball_our_team_name') || "Our Team";
+        currentMatch = {
+            ourTeam: persistentTeamName,
+            opponent: "",
+            currentQuarter: 1,
+            matchTotalScore: 0,
+            opponentTotalScore: 0,
+            quartersData: [],
+            liveGs: { goals: 0, misses: 0 },
+            liveGa: { goals: 0, misses: 0 },
+            liveOpponent: { goals: 0, misses: 0 },
+            gsPlayer: "",
+            gaPlayer: "",
+            runningGameTotals: {},
+            runningOppTotals: { goals: 0, shots: 0 },
+            log: [],
+            shotHistory: [],
+            oppShotHistory: [],
+            playByPlay: []
+        };
+        
+        document.getElementById('opponent-name').value = "";
+        document.getElementById('display-opp').innerText = "???";
+        document.getElementById('opp-card-title').innerHTML = `<strong>Opponent</strong>`;
+        clearDropdownSelectors();
+        currentMatch.gsPlayer = "Unassigned";
+        currentMatch.gaPlayer = "Unassigned";
+        document.getElementById('name-gs').innerText = "Unassigned";
+        document.getElementById('name-ga').innerText = "Unassigned";
+        
+        calculateCarnivalTotals(); 
+        updateLiveUI();
+        updateSetupStatsDisplay();
+    }
+
+    function clearCarnivalHistory() {
+        if (confirm("Delete ALL historical games for this carnival? This cannot be undone.")) {
+            carnivalHistory = [];
+            localStorage.removeItem('netball_history');
+            renderHistory();
+            calculateCarnivalTotals();
+            updateSetupStatsDisplay();
+            updateLiveUI();
+        }
+    }
+</script>
+</body>
+</html>
