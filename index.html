@@ -436,7 +436,7 @@
 
     <div style="position: relative;">
         <details class="card">
-            <summary>Active Carnival History Log</summary>
+            <summary id="history-log-summary" style="font-size: 1.17rem; font-weight: bold; color: #444; padding: 15px; cursor: pointer;">📂 Active Carnival History Log</summary>
             <div class="details-content">
                 <div id="history-rows-container" style="margin-top: 15px;"></div>
             </div>
@@ -445,7 +445,7 @@
     </div>
 
     <details class="card" style="border-left: 5px solid #8b5cf6;">
-        <summary style="font-size: 1.17rem; font-weight: bold; color: #444; padding: 15px; cursor: pointer;">📂 Previous Carnivals Summary</summary>
+        <summary id="prev-carnivals-summary" style="font-size: 1.17rem; font-weight: bold; color: #444; padding: 15px; cursor: pointer;">📂 Previous Carnivals Summary</summary>
         <div class="details-content" id="previous-carnivals-container">
             <p style="color:#666; font-size:0.9rem; text-align: center; margin-top: 5px;">Fetch Existing Carnivals & Teams from the cloud to view historical records.</p>
         </div>
@@ -485,6 +485,29 @@
     let globalCloudData = null; 
     let pendingShareContext = null; 
     let individualStatsCache = {};
+    let fetchTimer = null;
+
+    // --- CENTRALIZED HEADER UPDATER ---
+    // Instantly syncs every dynamic text header on the screen based on state
+    function refreshDynamicHeaders() {
+        const cName = carnivalName || "Netball Carnival Tracker";
+        const tName = savedOurTeamName || "Our Team";
+        
+        const mainTitle = document.getElementById('carnival-title-display');
+        if (mainTitle) mainTitle.innerText = cName;
+        
+        const statsHeader = document.getElementById('active-carnival-stats-header');
+        if (statsHeader) statsHeader.innerText = `Carnival Stats: ${tName} @ ${cName}`;
+        
+        const historySummary = document.getElementById('history-log-summary');
+        if (historySummary) historySummary.innerHTML = `📂 History: ${tName} @ ${cName}`;
+        
+        const prevCarnivalsSummary = document.getElementById('prev-carnivals-summary');
+        if (prevCarnivalsSummary) prevCarnivalsSummary.innerHTML = `📂 Previous Carnivals: ${tName}`;
+        
+        const teamDisplay = document.getElementById('display-our-team');
+        if (teamDisplay) teamDisplay.innerText = tName;
+    }
 
     // Core Cloud Fetch Filtering Logic - Prioritize Latest Data
     function getLatestRows(rows) {
@@ -578,26 +601,33 @@
     }
 
     window.onload = function() {
-        document.getElementById('carnival-title-display').innerText = carnivalName;
+        refreshDynamicHeaders();
         setupDropdownInitialState('carnival-select', 'carnival-name-input', carnivalName, "Netball Carnival Tracker");
         setupDropdownInitialState('team-select', 'our-team-name', savedOurTeamName, "Our Team");
 
-        document.getElementById('carnival-name-input').addEventListener('change', (e) => {
-            carnivalName = e.target.value.trim() || "Netball Carnival Tracker";
-            localStorage.setItem('netball_carnival_name', carnivalName);
-            document.getElementById('carnival-title-display').innerText = carnivalName;
-            loadCurrentRoster(); renderHistory(); calculateCarnivalTotals(); getNextGameNumber();
+        document.getElementById('carnival-name-input').addEventListener('input', (e) => {
+            carnivalName = e.target.value || "Netball Carnival Tracker";
+            localStorage.setItem('netball_carnival_name', carnivalName.trim());
+            refreshDynamicHeaders();
+            
+            loadCurrentRoster(); renderHistory(); calculateCarnivalTotals(); 
             if(globalCloudData) buildPreviousCarnivalSummaries(globalCloudData);
+            
+            clearTimeout(fetchTimer);
+            fetchTimer = setTimeout(getNextGameNumber, 1000);
         });
 
-        document.getElementById('display-our-team').innerText = currentGame.ourTeam;
-        document.getElementById('our-team-name').addEventListener('change', (e) => {
+        document.getElementById('our-team-name').addEventListener('input', (e) => {
             savedOurTeamName = e.target.value || "Our Team";
             currentGame.ourTeam = savedOurTeamName;
-            localStorage.setItem('netball_our_team_name', savedOurTeamName);
-            document.getElementById('display-our-team').innerText = currentGame.ourTeam;
-            loadCurrentRoster(); renderHistory(); calculateCarnivalTotals(); updateLiveUI(); getNextGameNumber();
+            localStorage.setItem('netball_our_team_name', savedOurTeamName.trim());
+            refreshDynamicHeaders();
+            
+            loadCurrentRoster(); renderHistory(); calculateCarnivalTotals(); updateLiveUI(); 
             if(globalCloudData) buildPreviousCarnivalSummaries(globalCloudData);
+            
+            clearTimeout(fetchTimer);
+            fetchTimer = setTimeout(getNextGameNumber, 1000);
         });
 
         loadCurrentRoster(); renderHistory(); calculateCarnivalTotals(); getNextGameNumber();
@@ -630,7 +660,8 @@
         else if (val !== '_default_') { inp.style.display = 'none'; carnivalName = val; }
         
         localStorage.setItem('netball_carnival_name', carnivalName);
-        document.getElementById('carnival-title-display').innerText = carnivalName;
+        refreshDynamicHeaders();
+        
         loadCurrentRoster(); renderHistory(); calculateCarnivalTotals(); getNextGameNumber();
         if(globalCloudData) buildPreviousCarnivalSummaries(globalCloudData);
     }
@@ -643,7 +674,8 @@
         
         localStorage.setItem('netball_our_team_name', savedOurTeamName);
         currentGame.ourTeam = savedOurTeamName;
-        document.getElementById('display-our-team').innerText = currentGame.ourTeam;
+        refreshDynamicHeaders();
+        
         loadCurrentRoster(); renderHistory(); calculateCarnivalTotals(); getNextGameNumber();
         if(globalCloudData) buildPreviousCarnivalSummaries(globalCloudData);
     }
@@ -1095,7 +1127,9 @@
         document.getElementById('pct-opp').innerText = `${oppQuarterPct}%`;
         const totalOppGoals = currentGame.runningOppTotals.goals + currentGame.liveOpponent.goals, totalOppShots = currentGame.runningOppTotals.shots + oppLiveShots, oppGamePct = totalOppShots > 0 ? Math.round((totalOppGoals / totalOppShots) * 100) : 0;
         document.getElementById('raw-opp').innerHTML = `Quarter: ${currentGame.liveOpponent.goals}/${oppLiveShots} (${oppQuarterPct}%)<br>Game: ${totalOppGoals}/${totalOppShots} (${oppGamePct}%)`;
-        document.getElementById('live-log').innerHTML = currentGame.log.length ? currentGame.log.join('<br>') : "The game will automatically start and lock your setup inputs when you track your first stat...";
+        
+        const isGameStarted = isGameActive();
+        document.getElementById('live-log').innerHTML = currentGame.log.length ? currentGame.log.join('<br>') : (isGameStarted ? "Current quarter actions will show here..." : "The game will automatically start and lock your setup inputs when you track your first stat...");
         
         const qBtn = document.getElementById('quarter-btn'), qResetBtn = document.getElementById('quarter-reset-btn');
         if (currentGame.currentQuarter >= 5) { qBtn.style.display = "none"; qResetBtn.style.display = "none"; } else { qBtn.style.display = "block"; qResetBtn.style.display = "block"; qBtn.innerText = `⏱️ End Quarter ${currentGame.currentQuarter}`; }
@@ -1133,8 +1167,6 @@
     }
 
     function calculateCarnivalTotals() {
-        document.getElementById('active-carnival-stats-header').innerText = `Carnival Stats - ${carnivalName}`;
-        
         const activeHistory = getActiveHistory();
         let cumulativeGoals = 0, cumulativeMisses = 0;
         individualStatsCache = {}; 
