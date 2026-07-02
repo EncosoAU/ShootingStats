@@ -1427,17 +1427,67 @@
         currentGame.quartersData = JSON.parse(JSON.stringify(matchToEdit.quartersBreakdown)); 
         currentGame.matchTimestamp = matchToEdit.matchTimestamp || null;
         
-        let nextQ = 1; const savedQNums = currentGame.quartersData.map(q => q.quarterNumber); while(savedQNums.includes(nextQ)) nextQ++; currentGame.currentQuarter = nextQ;
-        currentGame.liveGs = { goals: 0, misses: 0 }; currentGame.liveGa = { goals: 0, misses: 0 }; currentGame.liveOpponent = { goals: 0, misses: 0 };
-        currentGame.shotHistory = []; currentGame.oppShotHistory = []; currentGame.playByPlay = []; currentGame.log = [`[EDIT MODE] Loaded game vs ${currentGame.opponent.trim()}.`];
+        if (currentGame.quartersData && currentGame.quartersData.length > 0) {
+            const maxQ = Math.max(...currentGame.quartersData.map(q => q.quarterNumber));
+            const qIndex = currentGame.quartersData.findIndex(q => q.quarterNumber === maxQ);
+            const lastQData = currentGame.quartersData.splice(qIndex, 1)[0];
+            
+            currentGame.currentQuarter = maxQ;
+            currentGame.liveGs = { goals: lastQData.gsGoals, misses: lastQData.gsMisses };
+            currentGame.liveGa = { goals: lastQData.gaGoals, misses: lastQData.gaMisses };
+            currentGame.liveOpponent = { goals: lastQData.oppGoals || 0, misses: lastQData.oppMisses || 0 };
+            currentGame.shotHistory = lastQData.shotHistory ? [...lastQData.shotHistory] : [];
+            currentGame.oppShotHistory = lastQData.oppShotHistory ? [...lastQData.oppShotHistory] : [];
+            currentGame.playByPlay = lastQData.playByPlay ? [...lastQData.playByPlay] : [];
+            
+            if (lastQData.log && lastQData.log.length > 0) {
+                currentGame.log = [...lastQData.log];
+            } else {
+                currentGame.log = [];
+                let tempUs = 0, tempOpp = 0;
+                currentGame.quartersData.forEach(q => { tempUs += (q.gsGoals + q.gaGoals); tempOpp += (q.oppGoals || 0); });
+                if (currentGame.playByPlay.length > 0) {
+                    currentGame.playByPlay.forEach(p => {
+                        if (p.team === 'Us' && p.isGoal) tempUs++; if (p.team === 'Opp' && p.isGoal) tempOpp++;
+                        const outcome = p.isGoal ? "scored a Goal" : "missed";
+                        if (p.team === 'Us') currentGame.log.unshift(`[Q${maxQ}] [${tempUs}-${tempOpp}] ${p.role.toUpperCase()} (${p.actor}) ${outcome}.`);
+                        else currentGame.log.unshift(`[Q${maxQ}] [${tempUs}-${tempOpp}] <strong>${p.actor ? p.actor.trim().toUpperCase() : "OPPONENT"}</strong> ${outcome}.`);
+                    });
+                }
+            }
+            currentGame.log.unshift(`[EDIT MODE] Loaded game vs ${currentGame.opponent.trim()}. Returned to Q${maxQ}.`);
+
+            currentGame.gsPlayer = players.includes(lastQData.gsName) ? lastQData.gsName : "Unassigned";
+            currentGame.gaPlayer = players.includes(lastQData.gaName) ? lastQData.gaName : "Unassigned";
+            document.getElementById('select-gs').value = currentGame.gsPlayer !== "Unassigned" ? currentGame.gsPlayer : "";
+            document.getElementById('select-ga').value = currentGame.gaPlayer !== "Unassigned" ? currentGame.gaPlayer : "";
+
+        } else {
+            currentGame.currentQuarter = 1;
+            currentGame.liveGs = { goals: 0, misses: 0 }; currentGame.liveGa = { goals: 0, misses: 0 }; currentGame.liveOpponent = { goals: 0, misses: 0 };
+            currentGame.shotHistory = []; currentGame.oppShotHistory = []; currentGame.playByPlay = []; 
+            currentGame.log = [`[EDIT MODE] Loaded game vs ${currentGame.opponent.trim()}.`];
+            
+            clearDropdownSelectors();
+            currentGame.gsPlayer = "Unassigned"; currentGame.gaPlayer = "Unassigned";
+        }
         
         rebuildRunningTotals(); recalculateMatchScores();
-        document.getElementById('game-number-input').value = currentGame.gameNumber; document.getElementById('display-our-team').innerText = currentGame.ourTeam; document.getElementById('opponent-name').value = currentGame.opponent;
-        document.getElementById('display-opp').innerText = currentGame.opponent; document.getElementById('opp-card-title').innerHTML = `<strong>${currentGame.opponent.trim()}</strong>`;
+        document.getElementById('game-number-input').value = currentGame.gameNumber; 
+        document.getElementById('display-our-team').innerText = currentGame.ourTeam; 
+        document.getElementById('opponent-name').value = currentGame.opponent;
+        document.getElementById('display-opp').innerText = currentGame.opponent; 
+        document.getElementById('opp-card-title').innerHTML = `<strong>${currentGame.opponent.trim()}</strong>`;
         
-        carnivalHistory.splice(globalIndex, 1); localStorage.setItem('netball_history', JSON.stringify(carnivalHistory));
-        clearDropdownSelectors(); currentGame.gsPlayer = "Unassigned"; currentGame.gaPlayer = "Unassigned";
-        renderHistory(); calculateCarnivalTotals(); updateLiveUI(); window.scrollTo({ top: 0, behavior: 'smooth' });
+        carnivalHistory.splice(globalIndex, 1); 
+        localStorage.setItem('netball_history', JSON.stringify(carnivalHistory));
+        
+        assignShooters(); 
+        
+        renderHistory(); 
+        calculateCarnivalTotals(); 
+        updateLiveUI(); 
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function deleteSavedGame(globalIndex) {
