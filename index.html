@@ -155,7 +155,7 @@
         .btn-quarter { background-color: rgba(237, 108, 2, 0.2) !important; color: #c2410c !important; border: 1px solid #fed7aa !important; flex: 2; width: 100%; padding: 12px; }
         .btn-reset-q { background-color: rgba(225, 29, 72, 0.1) !important; border: 1px solid #fda4af !important; color: #e11d48 !important; flex: 1; width: 100%; padding: 11px !important; font-size: 0.9rem !important; font-weight: bold !important; }
 
-        .game-controls { display: flex; gap: 8px; margin-bottom: 15px; align-items: center; }
+        .game-controls { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
         .game-controls button { font-size: 1rem; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; }
         .btn-save { background-color: #0284c7; color: white; flex: 2; width: 100%; padding: 12px; }
         .btn-reset-game { background-color: rgba(225, 29, 72, 0.1) !important; border: 1px solid #fda4af !important; color: #e11d48 !important; flex: 1; width: 100%; padding: 11px !important; font-size: 0.9rem !important; font-weight: bold !important; }
@@ -374,6 +374,11 @@
             <button class="btn-quarter" id="quarter-btn" onclick="endQuarter()">⏱️ End Quarter 1</button>
             <button class="btn-reset-q" id="quarter-reset-btn" onclick="resetCurrentQuarter()">🗑️ Reset Quarter</button>
         </div>
+
+        <div class="game-controls">
+            <button class="btn-save" id="btn-master-save" onclick="saveGame()">🔒 Save & Finalise Game</button>
+            <button class="btn-reset-game" onclick="resetCurrentGame()">🗑️ Discard Game</button>
+        </div>
     </div>
 
     <details class="card" style="border-left: 5px solid var(--warning);">
@@ -395,11 +400,6 @@
     <div class="card" style="border-left: 5px solid #0ea5e9;">
         <h3 style="font-size: 1.1rem; margin-bottom: 8px;">📝 Play-by-Play Log</h3>
         <div class="log-box" id="live-log">The game will automatically start and lock your setup inputs when you track your first stat...</div>
-    </div>
-
-    <div class="game-controls">
-        <button class="btn-save" id="btn-master-save" onclick="saveGame()">🔒 Save & Finalise Game</button>
-        <button class="btn-reset-game" onclick="resetCurrentGame()">🗑️ Discard Game</button>
     </div>
 
     <details class="card" style="border-left: 5px solid var(--success);">
