@@ -92,6 +92,7 @@
             border-top: none;
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
             background: rgba(255, 255, 255, 0.97);
+            text-align: center;
         }
         
         /* Hide all unneeded elements in compact mode */
@@ -102,13 +103,14 @@
             display: none !important;
         }
         
-        /* Realign the remaining score to a single clean line */
+        /* Realign the remaining score to a single clean line and explicitly center it */
         .score-banner.compact #main-score-container {
             border-top: none !important;
             margin-top: 0 !important;
             padding-top: 0 !important;
             font-size: 1.4rem !important;
             flex-direction: row !important;
+            justify-content: center !important;
         }
 
         .q-banner { margin-bottom: 5px; font-size: 0.95rem; display: flex; justify-content: center; align-items: center; width: 100%; }
