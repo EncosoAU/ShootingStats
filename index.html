@@ -33,166 +33,94 @@
             align-items: center;
         }
 
-        .container {
-            width: 100%;
-            max-width: 650px;
-        }
-
-        header {
-            text-align: center;
-            margin-bottom: 15px;
-        }
-
-        h1 {
-            color: var(--primary);
-            margin: 0;
-            font-size: 1.8rem;
-            text-align: center;
-            font-weight: bold;
-        }
-
+        .container { width: 100%; max-width: 650px; }
+        header { text-align: center; margin-bottom: 15px; }
+        h1 { color: var(--primary); margin: 0; font-size: 1.5rem; text-align: center; font-weight: bold; }
         h3 { margin-top: 0; margin-bottom: 10px; color: #444; }
 
         .card {
-            background: var(--card-bg);
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 15px;
+            background: var(--card-bg); border-radius: 10px; padding: 15px; margin-bottom: 15px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         }
 
         /* Dropdown/Accordion Styles */
-        details.card {
-            padding: 0;
-            overflow: hidden;
-        }
-        details.card summary {
-            padding: 15px;
-            font-size: 1.17rem;
-            font-weight: bold;
-            color: #444;
-            cursor: pointer;
-            outline: none;
-            -webkit-user-select: none;
-            user-select: none;
-        }
-        details.card summary::-webkit-details-marker {
-            color: var(--primary);
-        }
-        .details-content {
-            padding: 0 15px 15px 15px;
-        }
+        details.card { padding: 0; overflow: hidden; }
+        details.card summary { padding: 15px; font-size: 1.17rem; font-weight: bold; color: #444; cursor: pointer; outline: none; user-select: none; }
+        details.card summary::-webkit-details-marker { color: var(--primary); }
+        .details-content { padding: 0 15px 15px 15px; }
 
-        .form-group {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
+        .form-group { display: flex; gap: 10px; margin-bottom: 10px; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem; box-sizing: border-box; }
+        input:disabled, select:disabled { background-color: #f1f5f9; color: #94a3b8; cursor: not-allowed; border-color: #e2e8f0; }
 
-        input, select {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            font-size: 1rem;
-            box-sizing: border-box;
+        .btn { padding: 10px 15px; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; color: white; background-color: var(--primary); white-space: nowrap; }
+        .btn:disabled { background-color: #94a3b8 !important; cursor: not-allowed; }
+
+        .player-tag { display: inline-flex; align-items: center; background: #e0e0e0; padding: 5px 10px; border-radius: 15px; margin: 4px; font-size: 0.9rem; }
+        .player-tag button { background: none; border: none; color: #666; margin-left: 5px; cursor: pointer; font-weight: bold; }
+
+        /* Smooth Non-Jumping Sticky Score Wrapper */
+        .sticky-score-wrapper {
+            margin-bottom: 15px;
+            /* Height is dynamically set in JS to prevent page jumping */
         }
         
-        /* Disabled input styling */
-        input:disabled, select:disabled {
-            background-color: #f1f5f9;
-            color: #94a3b8;
-            cursor: not-allowed;
-            border-color: #e2e8f0;
-        }
-
-        .btn {
-            padding: 10px 15px;
-            font-weight: bold;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            color: white;
-            background-color: var(--primary);
-            white-space: nowrap;
-        }
-        
-        .btn:disabled {
-            background-color: #94a3b8 !important;
-            cursor: not-allowed;
-        }
-
-        .player-tag {
-            display: inline-flex;
-            align-items: center;
-            background: #e0e0e0;
-            padding: 5px 10px;
-            border-radius: 15px;
-            margin: 4px;
-            font-size: 0.9rem;
-        }
-
-        .player-tag button {
-            background: none;
-            border: none;
-            color: #666;
-            margin-left: 5px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-
-        /* Game Score Banner */
         .score-banner {
-            background: #f0f4f8;
+            background: rgba(240, 244, 248, 0.95);
+            backdrop-filter: blur(8px);
             color: #1e293b;
             padding: 15px;
             border-radius: 8px;
             font-size: 1.1rem;
-            margin-bottom: 15px;
             line-height: 1.5;
-            border: 1px solid #e2e8f0;
+            border: 2px solid #cbd5e1;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
         
-        .q-banner {
-            margin-bottom: 5px;
-            font-size: 0.95rem;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+        /* Compact Mode applied on scroll - Uses FIXED position to detach from document flow */
+        .score-banner.compact {
+            position: fixed;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
             width: 100%;
+            max-width: 650px; /* Match container width */
+            z-index: 1000;
+            padding: 8px 15px;
+            border-radius: 0 0 10px 10px;
+            border-top: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            background: rgba(255, 255, 255, 0.97);
+        }
+        
+        /* Hide all unneeded elements in compact mode */
+        .score-banner.compact #vs-header,
+        .score-banner.compact #score-dropdown,
+        .score-banner.compact #game-score-title,
+        .score-banner.compact #active-q-label {
+            display: none !important;
+        }
+        
+        /* Realign the remaining score to a single clean line */
+        .score-banner.compact #main-score-container {
+            border-top: none !important;
+            margin-top: 0 !important;
+            padding-top: 0 !important;
+            font-size: 1.4rem !important;
+            flex-direction: row !important;
         }
 
+        .q-banner { margin-bottom: 5px; font-size: 0.95rem; display: flex; justify-content: center; align-items: center; width: 100%; }
+
         /* Translucent Dropdown Button */
-        details.score-dropdown {
-            background: rgba(255, 255, 255, 0.45);
-            border: 1px solid rgba(30, 41, 59, 0.12);
-            border-radius: 6px;
-            margin-bottom: 10px;
-            overflow: hidden;
-        }
-        details.score-dropdown summary {
-            padding: 8px;
-            font-size: 0.95rem;
-            font-weight: bold;
-            color: #1e293b;
-            text-align: center;
-            cursor: pointer;
-            list-style: none;
-        }
+        details.score-dropdown { background: rgba(255, 255, 255, 0.6); border: 1px solid rgba(30, 41, 59, 0.12); border-radius: 6px; margin-bottom: 10px; overflow: hidden; }
+        details.score-dropdown summary { padding: 8px; font-size: 0.95rem; font-weight: bold; color: #1e293b; text-align: center; cursor: pointer; list-style: none; }
         details.score-dropdown summary::-webkit-details-marker { display: none; }
         details.score-dropdown[open] summary { border-bottom: 1px dashed rgba(30, 41, 59, 0.2); margin-bottom: 8px; }
 
         .live-grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px; }
         .full-width-box { grid-column: span 2; }
-
-        @media (max-width: 480px) {
-            .live-grid-container { grid-template-columns: 1fr !important; }
-            .setup-stats-grid { grid-template-columns: 1fr !important; }
-            .full-width-mobile { grid-column: span 1 !important; }
-            .history-actions { flex-direction: column; }
-            .q-controls, .game-controls { flex-direction: column; }
-            .form-group.responsive-stack { flex-direction: column; gap: 5px; }
-        }
 
         .shooter-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; text-align: center; }
         .role-title { font-weight: bold; font-size: 1.1rem; color: var(--primary); }
@@ -200,28 +128,36 @@
         .stat-raw { font-size: 0.85rem; color: #333; font-weight: 500; margin-bottom: 3px; line-height: 1.3; }
         .stat-carnival-line { font-size: 0.8rem; color: #64748b; font-weight: 500; margin-bottom: 10px; }
 
-        .btn-shot-group { display: flex; gap: 8px; margin-bottom: 8px; }
-        .btn-goal { background-color: var(--success); flex: 1; padding: 12px; font-weight: bold;}
-        .btn-miss { background-color: var(--danger); flex: 1; padding: 12px; font-weight: bold;}
-        .btn-undo { background-color: var(--neutral-dark); width: 100%; padding: 6px; font-size: 0.8rem; border-radius: 4px; }
+        .btn-shot-group { display: flex; gap: 8px; margin-bottom: 5px; }
+        .btn-goal { background-color: var(--success); flex: 1; padding: 20px 10px; font-size: 1.15rem; font-weight: 900; letter-spacing: 1px; border-radius: 8px;}
+        .btn-miss { background-color: var(--danger); flex: 1; padding: 20px 10px; font-size: 1.15rem; font-weight: 900; letter-spacing: 1px; border-radius: 8px;}
+        .btn-undo { background-color: var(--neutral-dark); width: 100%; padding: 12px; font-size: 1rem; border-radius: 6px; font-weight: bold; color: white; border: none; cursor: pointer; }
+
+        /* Button Press Animations */
+        @keyframes popFlashGreen { 
+            0% { background-color: var(--success); transform: scale(1); } 
+            40% { background-color: #4caf50; transform: scale(1.08); box-shadow: 0 0 15px rgba(76, 175, 80, 0.6); } 
+            100% { background-color: var(--success); transform: scale(1); } 
+        }
+        @keyframes popFlashRed { 
+            0% { background-color: var(--danger); transform: scale(1); } 
+            40% { background-color: #ef5350; transform: scale(1.08); box-shadow: 0 0 15px rgba(239, 83, 80, 0.6); } 
+            100% { background-color: var(--danger); transform: scale(1); } 
+        }
+        .flash-green-anim { animation: popFlashGreen 0.35s ease-out; }
+        .flash-red-anim { animation: popFlashRed 0.35s ease-out; }
 
         .q-controls { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; }
         .q-controls button { font-size: 1rem; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; }
-        
         .btn-quarter { background-color: rgba(237, 108, 2, 0.2) !important; color: #c2410c !important; border: 1px solid #fed7aa !important; flex: 2; width: 100%; padding: 12px; }
-        .btn-quarter:hover { background-color: rgba(237, 108, 2, 0.3) !important; }
-        
         .btn-reset-q { background-color: rgba(225, 29, 72, 0.1) !important; border: 1px solid #fda4af !important; color: #e11d48 !important; flex: 1; width: 100%; padding: 11px !important; font-size: 0.9rem !important; font-weight: bold !important; }
-        .btn-reset-q:hover { background-color: rgba(225, 29, 72, 0.2) !important; }
 
         .game-controls { display: flex; gap: 8px; margin-bottom: 15px; align-items: center; }
         .game-controls button { font-size: 1rem; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; }
         .btn-save { background-color: #0284c7; color: white; flex: 2; width: 100%; padding: 12px; }
-        
         .btn-reset-game { background-color: rgba(225, 29, 72, 0.1) !important; border: 1px solid #fda4af !important; color: #e11d48 !important; flex: 1; width: 100%; padding: 11px !important; font-size: 0.9rem !important; font-weight: bold !important; }
-        .btn-reset-game:hover { background-color: rgba(225, 29, 72, 0.2) !important; }
 
-        .log-box { max-height: 120px; overflow-y: auto; background: #fafafa; border: 1px solid #eee; padding: 8px; border-radius: 6px; font-size: 0.85rem; }
+        .log-box { max-height: 180px; overflow-y: auto; background: #fafafa; border: 1px solid #eee; padding: 10px; border-radius: 6px; font-size: 0.85rem; line-height: 1.5; }
 
         .setup-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
         .setup-stat-box { background: #f8fafc; border: 1px dashed #cbd5e1; padding: 8px 12px; border-radius: 6px; font-size: 0.85rem; color: #475569; }
@@ -235,13 +171,9 @@
         .history-card-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; margin-bottom: 10px; }
         .history-score { font-size: 1.2rem; font-weight: bold; color: var(--primary); text-align: right; }
         .scrollable-quarter-data { max-height: 140px; overflow-y: auto; background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0; font-size: 0.85rem; margin-top: 12px; color: #334155; }
-        .scrollable-quarter-data::-webkit-scrollbar { width: 6px; }
-        .scrollable-quarter-data::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
-        .scrollable-quarter-data::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         
         .history-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
         .btn-clear { background-color: #64748b; font-size: 0.8rem; padding: 5px 10px; color: white; border: none; border-radius: 4px; cursor: pointer; }
-
         .btn-edit-action { background-color: rgba(245, 158, 11, 0.1) !important; border: 1px solid #fde68a !important; color: #d97706 !important; flex: 1; padding: 8px; font-size: 0.85rem; border-radius: 4px; font-weight: bold; cursor: pointer; text-align: center; }
         .btn-row-share { background-color: rgba(46, 125, 50, 0.1) !important; border: 1px solid #a7f3d0 !important; color: #15803d !important; flex: 1; padding: 8px; font-size: 0.85rem; border-radius: 4px; font-weight: bold; cursor: pointer; text-align: center; }
         .btn-delete-action { background-color: rgba(225, 29, 72, 0.1) !important; border: 1px solid #fda4af !important; color: #e11d48 !important; flex: 1; padding: 8px; font-size: 0.85rem; border-radius: 4px; font-weight: bold; cursor: pointer; text-align: center; }
@@ -259,37 +191,72 @@
         
         .prev-carnival-summary-box { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 12px; margin-bottom: 12px; text-align: left; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
         .prev-carnival-title { font-weight: bold; color: var(--primary); border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 8px; font-size: 1.05rem; }
+
+        /* Mobile specific squish to fit everything safely */
+        @media (max-width: 650px) {
+            .score-banner.compact { border-radius: 0; border-left: none; border-right: none; }
+        }
+        @media (max-width: 480px) {
+            .setup-stats-grid { grid-template-columns: 1fr !important; }
+            .history-actions { flex-direction: column; }
+            .q-controls, .game-controls { flex-direction: column; }
+            .form-group.responsive-stack { flex-direction: column; gap: 5px; }
+            
+            /* Live App Mobile Fitting */
+            .live-grid-container { grid-template-columns: 1fr 1fr !important; gap: 8px; }
+            .full-width-mobile { grid-column: span 2 !important; }
+            .shooter-box { padding: 8px 6px; }
+            .btn-goal, .btn-miss { padding: 12px 2px; font-size: 0.95rem; }
+            .stat-pct { font-size: 1.4rem; margin: 2px 0; }
+            .stat-raw { font-size: 0.75rem; }
+            .role-title { font-size: 1rem; }
+            .stat-carnival-line { font-size: 0.75rem; margin-bottom: 6px; }
+            .score-banner { padding: 10px; font-size: 1rem; }
+            .sticky-score-wrapper { margin-bottom: 8px; }
+        }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <header>
-        <h1 id="carnival-title-display">Netball Carnival Tracker</h1>
+<div id="start-page" class="container" style="max-width: 450px; margin-top: 40px;">
+    <div class="card" style="text-align: center; padding: 30px 20px;">
+        <h1 style="margin-bottom: 10px; font-size: 2.2rem;">Netball Tracker</h1>
+        <p style="color: #64748b; margin-bottom: 25px; font-size: 0.95rem;">Select your configuration to begin.</p>
+        
+        <button class="btn" id="btn-fetch-cloud-meta" onclick="fetchCarnivalsAndTeams()" style="background-color: #0ea5e9; width:100%; margin-bottom: 25px; padding: 12px;">☁️ Fetch Cloud Carnivals</button>
+        
+        <div style="text-align: left; margin-bottom: 5px; font-weight: bold; color: #475569; font-size: 0.9rem;">1. Select Carnival</div>
+        <div class="form-group responsive-stack" style="margin-bottom: 15px;">
+            <select id="carnival-select" onchange="handleCarnivalSelection()" style="background-color: #f8fafc;">
+                <option value="_default_">-- Select Carnival --</option>
+                <option value="_new_">+ Create New Carnival...</option>
+            </select>
+            <input type="text" id="carnival-name-input" placeholder="Enter New Carnival Name" style="display:none; background-color: #f8fafc;">
+        </div>
+        
+        <div style="text-align: left; margin-bottom: 5px; font-weight: bold; color: #475569; font-size: 0.9rem;">2. Select Team</div>
+        <div class="form-group responsive-stack" style="margin-bottom: 30px;">
+            <select id="team-select" onchange="handleTeamSelection()" style="background-color: #f8fafc;">
+                <option value="_default_">-- Select Our Team --</option>
+                <option value="_new_">+ Create New Team...</option>
+            </select>
+            <input type="text" id="our-team-name" placeholder="Enter New Team Name" style="display:none; background-color: #f8fafc;">
+        </div>
+        
+        <button class="btn" id="btn-confirm-start" onclick="confirmStartSelection()" style="background-color: var(--success); width: 100%; font-size: 1.1rem; padding: 15px;">✅ Confirm & Load Data</button>
+    </div>
+</div>
+
+<div id="main-app" class="container" style="display: none;">
+    <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 0 5px;">
+        <h1 id="carnival-title-display" style="text-align: left; margin: 0;">Netball Tracker</h1>
+        <button class="btn" onclick="goBackToStart()" style="background-color: var(--neutral-dark); font-size: 0.8rem; padding: 8px 12px; margin: 0;">🔄 Change Team</button>
     </header>
 
     <details class="card" open>
-        <summary>1. Carnival & Roster Setup</summary>
+        <summary>1. Squad Setup</summary>
         <div class="details-content">
-            <button class="btn" id="btn-fetch-cloud-meta" onclick="fetchCarnivalsAndTeams()" style="background-color: #0ea5e9; width:100%; margin-bottom: 15px;">☁️ Fetch Existing Carnivals & Teams</button>
-            
-            <div class="form-group responsive-stack">
-                <select id="carnival-select" onchange="handleCarnivalSelection()">
-                    <option value="_default_">-- Select Carnival --</option>
-                    <option value="_new_">+ Create New Carnival...</option>
-                </select>
-                <input type="text" id="carnival-name-input" placeholder="Enter New Carnival Name" style="display:none;">
-            </div>
-            
-            <div class="form-group responsive-stack">
-                <select id="team-select" onchange="handleTeamSelection()">
-                    <option value="_default_">-- Select Our Team --</option>
-                    <option value="_new_">+ Create New Team...</option>
-                </select>
-                <input type="text" id="our-team-name" placeholder="Enter New Team Name" style="display:none;">
-            </div>
-            
-            <div class="form-group" style="margin-top: 15px;">
+            <div class="form-group" style="margin-top: 10px;">
                 <input type="text" id="new-player-name" placeholder="Enter player name...">
                 <button class="btn" onclick="addPlayer()">Add to Squad</button>
             </div>
@@ -305,12 +272,14 @@
         <div class="form-group">
             <input type="text" id="opponent-name" placeholder="Opponent Team Name (e.g., Wildcats)">
         </div>
-        <div class="form-group">
-            <select id="select-gs" onchange="assignShooters('gs')" aria-label="Select Goal Shooter (GS)">
-                <option value="">-- Select GS --</option>
-            </select>
+        <div class="form-group" style="align-items: center;">
+            <span style="font-weight: bold; color: var(--primary);">GA:</span>
             <select id="select-ga" onchange="assignShooters('ga')" aria-label="Select Goal Attack (GA)">
                 <option value="">-- Select GA --</option>
+            </select>
+            <span style="font-weight: bold; color: var(--primary); margin-left: 10px;">GS:</span>
+            <select id="select-gs" onchange="assignShooters('gs')" aria-label="Select Goal Shooter (GS)">
+                <option value="">-- Select GS --</option>
             </select>
         </div>
 
@@ -320,11 +289,15 @@
         </div>
     </div>
 
-    <div class="card">
-        <div class="score-banner">
-            <div style="font-weight: bold; font-size: 1.3rem; margin-bottom: 8px; text-align: center;"><span id="display-our-team">Our Team</span> Vs: <span id="display-opp">???</span></div>
+    <div id="sticky-anchor"></div>
+    
+    <div class="sticky-score-wrapper" id="sticky-score-wrapper">
+        <div class="score-banner" id="score-banner">
+            <div id="vs-header" style="font-weight: bold; font-size: 1.3rem; margin-bottom: 8px; text-align: center;">
+                <span id="display-our-team">Our Team</span> Vs: <span id="display-opp">???</span>
+            </div>
             
-            <details class="score-dropdown">
+            <details class="score-dropdown" id="score-dropdown">
                 <summary>📊 View Quarter Details (Tap to Toggle)</summary>
                 <div style="padding: 5px 10px;">
                     <div id="banner-q1" class="q-banner">Q1 Score: --</div>
@@ -334,8 +307,8 @@
                 </div>
             </details>
 
-            <div style="font-size: 1.5rem; border-top: 1px dashed rgba(30,41,59,0.15); margin-top: 10px; padding-top: 10px; display: flex; flex-direction: column; align-items: center; gap: 4px;">
-                <strong style="font-size: 1.1rem; text-transform: uppercase; letter-spacing: 0.5px;">Game Score</strong>
+            <div id="main-score-container" style="font-size: 1.5rem; border-top: 1px dashed rgba(30,41,59,0.15); margin-top: 10px; padding-top: 10px; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                <strong id="game-score-title" style="font-size: 1.1rem; text-transform: uppercase; letter-spacing: 0.5px;">Game Score</strong>
                 <div style="display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px;">
                     <span id="game-us-wrapper"><span id="display-match-team">Our Team</span> <span id="team-total">0</span></span> 
                     <span style="opacity: 0.7;">-</span> 
@@ -344,30 +317,30 @@
                 <span id="active-q-label" style="font-size: 0.9rem; font-weight: normal; opacity: 0.8; margin-top: 2px;">(Q1 Ready)</span>
             </div>
         </div>
+    </div>
 
+    <div class="card">
         <div class="live-grid-container">
-            <div class="shooter-box">
-                <div class="role-title">GS: <span id="name-gs">Unassigned</span></div>
-                <div class="stat-pct" id="pct-gs">0%</div>
-                <div class="stat-raw" id="raw-gs">Quarter: 0/0 (0%)<br>Game: 0/0 (0%)</div>
-                <div class="stat-carnival-line" id="carn-gs-line">Carnival Overall: 0%</div>
-                <div class="btn-shot-group">
-                    <button class="btn btn-goal" onclick="recordShot('gs', true)">GOAL</button>
-                    <button class="btn btn-miss" onclick="recordShot('gs', false)">MISS</button>
-                </div>
-                <button class="btn btn-undo" onclick="undoShot('gs')">↩️ Undo Last Shot</button>
-            </div>
-
             <div class="shooter-box">
                 <div class="role-title">GA: <span id="name-ga">Unassigned</span></div>
                 <div class="stat-pct" id="pct-ga">0%</div>
                 <div class="stat-raw" id="raw-ga">Quarter: 0/0 (0%)<br>Game: 0/0 (0%)</div>
                 <div class="stat-carnival-line" id="carn-ga-line">Carnival Overall: 0%</div>
                 <div class="btn-shot-group">
-                    <button class="btn btn-goal" onclick="recordShot('ga', true)">GOAL</button>
-                    <button class="btn btn-miss" onclick="recordShot('ga', false)">MISS</button>
+                    <button class="btn btn-goal" onclick="recordShot('ga', true, this)">GOAL</button>
+                    <button class="btn btn-miss" onclick="recordShot('ga', false, this)">MISS</button>
                 </div>
-                <button class="btn btn-undo" onclick="undoShot('ga')">↩️ Undo Last Shot</button>
+            </div>
+
+            <div class="shooter-box">
+                <div class="role-title">GS: <span id="name-gs">Unassigned</span></div>
+                <div class="stat-pct" id="pct-gs">0%</div>
+                <div class="stat-raw" id="raw-gs">Quarter: 0/0 (0%)<br>Game: 0/0 (0%)</div>
+                <div class="stat-carnival-line" id="carn-gs-line">Carnival Overall: 0%</div>
+                <div class="btn-shot-group">
+                    <button class="btn btn-goal" onclick="recordShot('gs', true, this)">GOAL</button>
+                    <button class="btn btn-miss" onclick="recordShot('gs', false, this)">MISS</button>
+                </div>
             </div>
 
             <div class="shooter-box full-width-box full-width-mobile" style="background: var(--opp-bg); border: 2px solid var(--opp-border); margin-top: 5px;">
@@ -376,19 +349,18 @@
                 <div class="stat-raw" id="raw-opp" style="color: var(--opp-text);">Quarter: 0/0 (0%)<br>Game: 0/0 (0%)</div>
                 <div class="stat-carnival-line" style="margin-bottom:10px; display:none;" id="quarter-opp-label"></div>
                 <div class="btn-shot-group">
-                    <button class="btn btn-goal" onclick="recordOppShot(true)">OPP GOAL</button>
-                    <button class="btn btn-miss" onclick="recordOppShot(false)">OPP MISS</button>
+                    <button class="btn btn-goal" onclick="recordOppShot(true, this)">OPP GOAL</button>
+                    <button class="btn btn-miss" onclick="recordOppShot(false, this)">OPP MISS</button>
                 </div>
-                <button class="btn btn-undo" onclick="undoOppShot()">↩️ Undo Opponent Shot</button>
             </div>
+
+            <button class="btn btn-undo full-width-box" onclick="undoLastAction()">↩️ Undo Last Action</button>
         </div>
 
         <div class="q-controls" id="q-controls-container">
             <button class="btn-quarter" id="quarter-btn" onclick="endQuarter()">⏱️ End Quarter 1</button>
             <button class="btn-reset-q" id="quarter-reset-btn" onclick="resetCurrentQuarter()">🗑️ Reset Quarter</button>
         </div>
-        
-        <div class="log-box" id="live-log">The game will automatically start and lock your setup inputs when you track your first stat...</div>
     </div>
 
     <details class="card" style="border-left: 5px solid var(--warning);">
@@ -406,6 +378,11 @@
             </div>
         </div>
     </details>
+
+    <div class="card" style="border-left: 5px solid #0ea5e9;">
+        <h3 style="font-size: 1.1rem; margin-bottom: 8px;">📝 Play-by-Play Log</h3>
+        <div class="log-box" id="live-log">The game will automatically start and lock your setup inputs when you track your first stat...</div>
+    </div>
 
     <div class="game-controls">
         <button class="btn-save" id="btn-master-save" onclick="saveGame()">🔒 Save & Finalise Game</button>
@@ -435,7 +412,7 @@
     </div>
 
     <div style="position: relative;">
-        <details class="card">
+        <details class="card" open>
             <summary id="history-log-summary" style="font-size: 1.17rem; font-weight: bold; color: #444; padding: 15px; cursor: pointer;">📂 Active Carnival History Log</summary>
             <div class="details-content">
                 <div id="history-rows-container" style="margin-top: 15px;"></div>
@@ -452,10 +429,9 @@
     </details>
 
     <div class="card" style="border-left: 5px solid #10b981;">
-        <h3>Cloud & App Management</h3>
+        <h3>App Management</h3>
         <div class="form-group" style="gap:8px; margin-bottom: 0;">
-            <button class="btn" id="btn-sync-cloud" onclick="syncFromGoogleSheets()" style="background-color: #10b981; flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">🔄 Sync data from web</button>
-            <button class="btn" onclick="hardResetApp()" style="background-color: var(--danger); font-size: 0.9rem; padding: 10px;">🚨 Wipe App (Clean Slate)</button>
+            <button class="btn" onclick="hardResetApp()" style="background-color: var(--danger); font-size: 0.9rem; padding: 10px; width: 100%;">🚨 Wipe App (Clean Slate)</button>
         </div>
     </div>
 </div>
@@ -478,121 +454,242 @@
 <script>
     const GOOGLE_SHEETS_URL = "https://script.google.com/macros/s/AKfycbzlz-gdeC4iotgfj-Nz1du-90-qLUBEZbMLhmyHWobB3t6Qz-6YPEP2iB89g3T0fhgMbg/exec";
 
-    // Application State Variables
     let carnivalHistory = JSON.parse(localStorage.getItem('netball_history')) || [];
-    let carnivalName = localStorage.getItem('netball_carnival_name') || "Netball Carnival Tracker";
-    let savedOurTeamName = localStorage.getItem('netball_our_team_name') || "Our Team";
+    let carnivalName = localStorage.getItem('netball_carnival_name') || "";
+    let savedOurTeamName = localStorage.getItem('netball_our_team_name') || "";
     let globalCloudData = null; 
     let pendingShareContext = null; 
     let individualStatsCache = {};
     let fetchTimer = null;
+    let wakeLock = null;
 
-    // --- CENTRALIZED HEADER UPDATER ---
-    // Instantly syncs every dynamic text header on the screen based on state
-    function refreshDynamicHeaders() {
-        const cName = carnivalName || "Netball Carnival Tracker";
-        const tName = savedOurTeamName || "Our Team";
+    let rosters = JSON.parse(localStorage.getItem('netball_rosters')) || {};
+    let players = []; 
+
+    let currentGame = { gameNumber: "", ourTeam: "", opponent: "", currentQuarter: 1, matchTotalScore: 0, opponentTotalScore: 0, quartersData: [], liveGs: { goals: 0, misses: 0 }, liveGa: { goals: 0, misses: 0 }, liveOpponent: { goals: 0, misses: 0 }, gsPlayer: "", gaPlayer: "", runningGameTotals: {}, runningOppTotals: { goals: 0, shots: 0 }, log: [], shotHistory: [], oppShotHistory: [], playByPlay: [], matchTimestamp: null };
+
+    window.addEventListener('beforeunload', function (e) { if (isGameActive()) { e.preventDefault(); e.returnValue = ''; } });
+
+    // Handle Wake Lock re-request on tab visibility change
+    document.addEventListener('visibilitychange', async () => {
+        if (wakeLock !== null && document.visibilityState === 'visible') {
+            wakeLock = null;
+            if (isGameActive()) await requestWakeLock();
+        }
+    });
+
+    // Detect scroll to toggle compact mode safely using the hidden anchor and locked wrapper heights
+    window.addEventListener('scroll', () => {
+        const wrapper = document.getElementById('sticky-score-wrapper');
+        const banner = document.getElementById('score-banner');
+        const anchor = document.getElementById('sticky-anchor');
         
-        const mainTitle = document.getElementById('carnival-title-display');
-        if (mainTitle) mainTitle.innerText = cName;
+        if (anchor && wrapper && banner) {
+            if (isGameActive()) {
+                const anchorRect = anchor.getBoundingClientRect();
+                
+                // If the hidden anchor scrolls out of view above the top of the screen
+                if (anchorRect.bottom < 0) {
+                    if (!banner.classList.contains('compact')) {
+                        // Lock the wrapper height *before* changing the banner size
+                        // This entirely prevents the page from jumping!
+                        wrapper.style.height = banner.offsetHeight + 'px';
+                        banner.classList.add('compact');
+                    }
+                } else {
+                    if (banner.classList.contains('compact')) {
+                        banner.classList.remove('compact');
+                        // Release the wrapper height so it flows naturally again
+                        wrapper.style.height = 'auto'; 
+                    }
+                }
+            } else {
+                if (banner.classList.contains('compact')) {
+                    banner.classList.remove('compact');
+                    wrapper.style.height = 'auto';
+                }
+            }
+        }
+    });
+
+    window.onload = function() {
+        setupDropdownInitialState('carnival-select', 'carnival-name-input', carnivalName, "");
+        setupDropdownInitialState('team-select', 'our-team-name', savedOurTeamName, "");
         
-        const statsHeader = document.getElementById('active-carnival-stats-header');
-        if (statsHeader) statsHeader.innerText = `Carnival Stats: ${tName} @ ${cName}`;
-        
-        const historySummary = document.getElementById('history-log-summary');
-        if (historySummary) historySummary.innerHTML = `📂 History: ${tName} @ ${cName}`;
-        
-        const prevCarnivalsSummary = document.getElementById('prev-carnivals-summary');
-        if (prevCarnivalsSummary) prevCarnivalsSummary.innerHTML = `📂 Previous Carnivals: ${tName}`;
-        
-        const teamDisplay = document.getElementById('display-our-team');
-        if (teamDisplay) teamDisplay.innerText = tName;
+        document.getElementById('carnival-name-input').addEventListener('input', (e) => { carnivalName = e.target.value; });
+        document.getElementById('our-team-name').addEventListener('input', (e) => { savedOurTeamName = e.target.value; });
+
+        document.getElementById('opponent-name').addEventListener('input', (e) => {
+            currentGame.opponent = e.target.value || "???";
+            document.getElementById('display-opp').innerText = currentGame.opponent;
+            document.getElementById('opp-card-title').innerHTML = `<strong>${currentGame.opponent.trim()}</strong>`;
+            updateLiveUI(); 
+        });
+    };
+
+    // --- WAKE LOCK API LOGIC ---
+    async function requestWakeLock() {
+        if ('wakeLock' in navigator) {
+            try {
+                if (wakeLock === null) {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    console.log('Screen Wake Lock is active');
+                }
+            } catch (err) { console.error(`${err.name}, ${err.message}`); }
+        }
+    }
+    function releaseWakeLock() {
+        if (wakeLock !== null) {
+            wakeLock.release().then(() => {
+                wakeLock = null;
+                console.log('Screen Wake Lock released');
+            });
+        }
     }
 
-    // Core Cloud Fetch Filtering Logic - Prioritize Latest Data
+    // --- NAVIGATION & START SYNC LOGIC ---
+    function goBackToStart() {
+        if (isGameActive()) { if(!confirm("You have an active game running. Going back will discard current unsaved game progress. Proceed?")) return; }
+        releaseWakeLock();
+        document.getElementById('main-app').style.display = 'none';
+        document.getElementById('start-page').style.display = 'block';
+    }
+
+    async function confirmStartSelection() {
+        const selCarnival = document.getElementById('carnival-select').value === '_new_' ? document.getElementById('carnival-name-input').value.trim() : document.getElementById('carnival-select').value;
+        const selTeam = document.getElementById('team-select').value === '_new_' ? document.getElementById('our-team-name').value.trim() : document.getElementById('team-select').value;
+
+        if (!selCarnival || selCarnival === '_default_') { alert("Please select or enter a Carnival."); return; }
+        if (!selTeam || selTeam === '_default_') { alert("Please select or enter a Team."); return; }
+
+        const btn = document.getElementById('btn-confirm-start');
+        btn.innerText = "⏳ Loading Data..."; btn.disabled = true;
+
+        if (selCarnival !== carnivalName || selTeam !== savedOurTeamName) {
+            carnivalHistory = [];
+            localStorage.removeItem('netball_history');
+        }
+        
+        carnivalName = selCarnival;
+        savedOurTeamName = selTeam;
+        localStorage.setItem('netball_carnival_name', carnivalName);
+        localStorage.setItem('netball_our_team_name', savedOurTeamName);
+
+        await syncSpecificData(carnivalName, savedOurTeamName);
+
+        refreshDynamicHeaders();
+        currentGame.ourTeam = savedOurTeamName;
+        loadCurrentRoster(); 
+        renderHistory(); 
+        calculateCarnivalTotals(); 
+        getNextGameNumber();
+        updateLiveUI(); 
+        updateSetupStatsDisplay();
+        
+        document.getElementById('start-page').style.display = 'none';
+        document.getElementById('main-app').style.display = 'block';
+        window.scrollTo({ top: 0 });
+        
+        btn.innerText = "✅ Confirm & Load Data"; btn.disabled = false;
+    }
+
+    async function syncSpecificData(targetCarnival, targetTeam) {
+        let userToken = localStorage.getItem('netball_security_token');
+        if (!userToken) {
+            userToken = prompt("🔑 Enter Security Token to download your team's historical data (Leave blank to start fresh):");
+            if (!userToken) return;
+            localStorage.setItem('netball_security_token', userToken.trim());
+        }
+
+        try {
+            const response = await fetch(`${GOOGLE_SHEETS_URL}?token=${encodeURIComponent(userToken)}`);
+            const resultText = await response.text();
+            if (resultText === "Unauthorized") { alert("❌ Invalid Token. Starting fresh local instance."); localStorage.removeItem('netball_security_token'); return; }
+            
+            const rawRows = JSON.parse(resultText); 
+            if (!Array.isArray(rawRows)) return;
+
+            const rows = getLatestRows(rawRows);
+            globalCloudData = rows;
+            buildPreviousCarnivalSummaries(rows);
+
+            let matchesMap = {};
+            let localCarnivalHistory = [];
+
+            rows.forEach(row => {
+                const rowCarnival = (row[13] || "Netball Carnival Tracker").trim(), matchId = row[0], teamName = (row[1] || "Our Team").trim();
+                const player = row[6];
+                if (rowCarnival && teamName && player && player !== "No Data") {
+                    const rKey = `${rowCarnival}::${teamName}`;
+                    if (!rosters[rKey]) rosters[rKey] = [];
+                    if (!rosters[rKey].includes(player)) rosters[rKey].push(player);
+                }
+
+                if (rowCarnival !== targetCarnival || teamName !== targetTeam) return;
+
+                const opponentName = (row[2] || "Opponent").trim(), qNum = parseInt(row[3]);
+                const pos = row[7], goals = parseInt(row[8]) || 0, misses = parseInt(row[9]) || 0, oppGoals = parseInt(row[5]) || 0, rowTimestamp = row[12] || null;
+                const uniqueKey = `${rowCarnival}::${teamName}::${matchId}`;
+                
+                if (!matchesMap[uniqueKey]) matchesMap[uniqueKey] = { carnivalName: rowCarnival, gameNumber: matchId, ourTeam: teamName, opponent: opponentName, matchTimestamp: rowTimestamp, quarters: {} };
+                if (!matchesMap[uniqueKey].quarters[qNum]) matchesMap[uniqueKey].quarters[qNum] = { quarterNumber: qNum, gsName: "", gaName: "", gsGoals: 0, gsMisses: 0, gaGoals: 0, gaMisses: 0, oppGoals: oppGoals, oppMisses: 0, shotHistory: [] };
+                
+                let qObj = matchesMap[uniqueKey].quarters[qNum];
+                if (pos === "GS") { qObj.gsName = player; qObj.gsGoals += goals; qObj.gsMisses += misses; } else if (pos === "GA") { qObj.gaName = player; qObj.gaGoals += goals; qObj.gaMisses += misses; }
+                
+                for (let g = 0; g < goals; g++) qObj.shotHistory.push({ role: pos.toLowerCase(), isGoal: true, name: player });
+                for (let m = 0; m < misses; m++) qObj.shotHistory.push({ role: pos.toLowerCase(), isGoal: false, name: player });
+            });
+
+            Object.keys(matchesMap).forEach(key => {
+                const mData = matchesMap[key]; let quartersArr = Object.values(mData.quarters).sort((a, b) => a.quarterNumber - b.quarterNumber);
+                let teamScore = 0, opponentScore = 0;
+                quartersArr.forEach(q => { teamScore += (q.gsGoals + q.gaGoals); opponentScore += q.oppGoals; });
+                localCarnivalHistory.push({ carnivalName: mData.carnivalName, gameNumber: mData.gameNumber, ourTeam: mData.ourTeam, opponent: mData.opponent, teamScore: teamScore, opponentScore: opponentScore, quartersBreakdown: quartersArr, matchTimestamp: mData.matchTimestamp });
+            });
+            
+            carnivalHistory = localCarnivalHistory;
+            localStorage.setItem('netball_history', JSON.stringify(carnivalHistory));
+            localStorage.setItem('netball_rosters', JSON.stringify(rosters));
+
+        } catch (err) { console.error("Cloud fetch failed", err); }
+    }
+
+    function refreshDynamicHeaders() {
+        const cName = carnivalName || "Netball Carnival";
+        const tName = savedOurTeamName || "Our Team";
+        document.getElementById('carnival-title-display').innerText = `${tName} @ ${cName}`;
+        document.getElementById('active-carnival-stats-header').innerText = `Carnival Stats: ${tName} @ ${cName}`;
+        document.getElementById('history-log-summary').innerHTML = `📂 History: ${tName} @ ${cName}`;
+        document.getElementById('prev-carnivals-summary').innerHTML = `📂 Previous Carnivals: ${tName}`;
+        document.getElementById('display-our-team').innerText = tName;
+    }
+
     function getLatestRows(rows) {
         if (!Array.isArray(rows)) return [];
         let latestTimestamps = {};
-        
         rows.forEach(row => {
-            const cName = (row[13] || "Netball Carnival Tracker").trim();
-            const tName = (row[1] || "Our Team").trim();
-            const gNum = (row[0] || "").trim();
+            const cName = (row[13] || "").trim(), tName = (row[1] || "").trim(), gNum = (row[0] || "").trim();
             if (!gNum) return; 
-            
-            const gameKey = `${cName}::${tName}::${gNum}`;
-            const ts = parseInt(row[14]) || 0; 
-            
-            if (!(gameKey in latestTimestamps) || ts > latestTimestamps[gameKey]) {
-                latestTimestamps[gameKey] = ts;
-            }
+            const gameKey = `${cName}::${tName}::${gNum}`, ts = parseInt(row[14]) || 0; 
+            if (!(gameKey in latestTimestamps) || ts > latestTimestamps[gameKey]) latestTimestamps[gameKey] = ts;
         });
-        
         return rows.filter(row => {
-            const cName = (row[13] || "Netball Carnival Tracker").trim();
-            const tName = (row[1] || "Our Team").trim();
-            const gNum = (row[0] || "").trim();
+            const cName = (row[13] || "").trim(), tName = (row[1] || "").trim(), gNum = (row[0] || "").trim();
             if (!gNum) return false;
-            
-            const gameKey = `${cName}::${tName}::${gNum}`;
-            const ts = parseInt(row[14]) || 0;
-            return ts === latestTimestamps[gameKey];
+            return (parseInt(row[14]) || 0) === latestTimestamps[`${cName}::${tName}::${gNum}`];
         });
     }
 
-    function getActiveHistory() {
-        return carnivalHistory.filter(m => {
-            const mCarnival = m.carnivalName || "Netball Carnival Tracker";
-            const mTeam = m.ourTeam || "Our Team";
-            return mCarnival === carnivalName && mTeam === savedOurTeamName;
-        });
-    }
-
-    let rosters = JSON.parse(localStorage.getItem('netball_rosters')) || {};
-    let legacyPlayers = JSON.parse(localStorage.getItem('netball_players'));
-    let players = []; 
-
-    if (Object.keys(rosters).length === 0 && legacyPlayers && legacyPlayers.length > 0) {
-        rosters[`${carnivalName}::${savedOurTeamName}`] = legacyPlayers;
-        localStorage.setItem('netball_rosters', JSON.stringify(rosters));
-        localStorage.removeItem('netball_players'); 
-    }
-
+    function getActiveHistory() { return carnivalHistory.filter(m => { return (m.carnivalName || "Netball Carnival Tracker") === carnivalName && (m.ourTeam || "Our Team") === savedOurTeamName; }); }
     function getCurrentRosterKey() { return `${carnivalName}::${savedOurTeamName}`; }
     function loadCurrentRoster() { players = rosters[getCurrentRosterKey()] || []; renderRosterTags(); populateDropdowns(); }
 
-    let currentGame = {
-        gameNumber: "",
-        ourTeam: savedOurTeamName,
-        opponent: "",
-        currentQuarter: 1,
-        matchTotalScore: 0,
-        opponentTotalScore: 0,
-        quartersData: [], 
-        liveGs: { goals: 0, misses: 0 },
-        liveGa: { goals: 0, misses: 0 },
-        liveOpponent: { goals: 0, misses: 0 }, 
-        gsPlayer: "",
-        gaPlayer: "",
-        runningGameTotals: {}, 
-        runningOppTotals: { goals: 0, shots: 0 }, 
-        log: [],
-        shotHistory: [],
-        oppShotHistory: [],
-        playByPlay: [],
-        matchTimestamp: null
-    };
-
-    window.addEventListener('beforeunload', function (e) {
-        if (isGameActive()) { e.preventDefault(); e.returnValue = ''; }
-    });
-
     function getCleanTimestamp() {
         const now = new Date(), days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        let dayName = days[now.getDay()], day = now.getDate(), monthName = months[now.getMonth()], year = now.getFullYear();
         let hours = now.getHours(), minutes = now.getMinutes(), ampm = hours >= 12 ? 'pm' : 'am';
         hours = hours % 12; hours = hours ? hours : 12; minutes = minutes < 10 ? '0' + minutes : minutes;
-        return `${dayName}, ${day} ${monthName} ${year} at ${hours}:${minutes}${ampm}`;
+        return `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()} at ${hours}:${minutes}${ampm}`;
     }
 
     function isGameActive() {
@@ -600,100 +697,24 @@
         return (currentGame.matchTimestamp !== null || activeLiveShots > 0 || currentGame.quartersData.length > 0);
     }
 
-    window.onload = function() {
-        refreshDynamicHeaders();
-        setupDropdownInitialState('carnival-select', 'carnival-name-input', carnivalName, "Netball Carnival Tracker");
-        setupDropdownInitialState('team-select', 'our-team-name', savedOurTeamName, "Our Team");
-
-        document.getElementById('carnival-name-input').addEventListener('input', (e) => {
-            carnivalName = e.target.value || "Netball Carnival Tracker";
-            localStorage.setItem('netball_carnival_name', carnivalName.trim());
-            refreshDynamicHeaders();
-            
-            loadCurrentRoster(); renderHistory(); calculateCarnivalTotals(); 
-            if(globalCloudData) buildPreviousCarnivalSummaries(globalCloudData);
-            
-            clearTimeout(fetchTimer);
-            fetchTimer = setTimeout(getNextGameNumber, 1000);
-        });
-
-        document.getElementById('our-team-name').addEventListener('input', (e) => {
-            savedOurTeamName = e.target.value || "Our Team";
-            currentGame.ourTeam = savedOurTeamName;
-            localStorage.setItem('netball_our_team_name', savedOurTeamName.trim());
-            refreshDynamicHeaders();
-            
-            loadCurrentRoster(); renderHistory(); calculateCarnivalTotals(); updateLiveUI(); 
-            if(globalCloudData) buildPreviousCarnivalSummaries(globalCloudData);
-            
-            clearTimeout(fetchTimer);
-            fetchTimer = setTimeout(getNextGameNumber, 1000);
-        });
-
-        loadCurrentRoster(); renderHistory(); calculateCarnivalTotals(); getNextGameNumber();
-        
-        document.getElementById('opponent-name').addEventListener('input', (e) => {
-            currentGame.opponent = e.target.value || "???";
-            document.getElementById('display-opp').innerText = currentGame.opponent;
-            document.getElementById('opp-card-title').innerHTML = `<strong>${currentGame.opponent.trim()}</strong>`;
-            updateLiveUI(); 
-        });
-
-        updateLiveUI(); updateSetupStatsDisplay();
-    };
-
     function setupDropdownInitialState(selectId, inputId, currentValue, defaultValue) {
         const sel = document.getElementById(selectId), inp = document.getElementById(inputId);
         if(currentValue && currentValue !== defaultValue) {
             let exists = Array.from(sel.options).some(opt => opt.value === currentValue);
             if (!exists) sel.innerHTML += `<option value="${currentValue}">${currentValue}</option>`;
             sel.value = currentValue; inp.style.display = 'none';
-        } else {
-            sel.value = "_new_"; inp.style.display = 'block'; inp.value = currentValue === defaultValue ? "" : currentValue;
-        }
+        } else { sel.value = "_new_"; inp.style.display = 'block'; inp.value = currentValue === defaultValue ? "" : currentValue; }
     }
 
-    function handleCarnivalSelection() {
-        const val = document.getElementById('carnival-select').value;
-        const inp = document.getElementById('carnival-name-input');
-        if(val === '_new_') { inp.style.display = 'block'; carnivalName = inp.value.trim() || "Netball Carnival Tracker"; } 
-        else if (val !== '_default_') { inp.style.display = 'none'; carnivalName = val; }
-        
-        localStorage.setItem('netball_carnival_name', carnivalName);
-        refreshDynamicHeaders();
-        
-        loadCurrentRoster(); renderHistory(); calculateCarnivalTotals(); getNextGameNumber();
-        if(globalCloudData) buildPreviousCarnivalSummaries(globalCloudData);
-    }
-
-    function handleTeamSelection() {
-        const val = document.getElementById('team-select').value;
-        const inp = document.getElementById('our-team-name');
-        if(val === '_new_') { inp.style.display = 'block'; savedOurTeamName = inp.value.trim() || "Our Team"; } 
-        else if (val !== '_default_') { inp.style.display = 'none'; savedOurTeamName = val; }
-        
-        localStorage.setItem('netball_our_team_name', savedOurTeamName);
-        currentGame.ourTeam = savedOurTeamName;
-        refreshDynamicHeaders();
-        
-        loadCurrentRoster(); renderHistory(); calculateCarnivalTotals(); getNextGameNumber();
-        if(globalCloudData) buildPreviousCarnivalSummaries(globalCloudData);
-    }
-
-    function getOrPromptToken() {
-        let storedToken = localStorage.getItem('netball_security_token');
-        if (storedToken && storedToken.trim() !== "") return storedToken.trim();
-        let userToken = prompt("🔑 Enter Security Token for Google Sheets connection:");
-        if (userToken === null) return null;
-        if (userToken.trim() === "") { alert("❌ Token cannot be blank."); return ""; }
-        localStorage.setItem('netball_security_token', userToken.trim()); return userToken.trim();
-    }
+    function handleCarnivalSelection() { const inp = document.getElementById('carnival-name-input'); inp.style.display = document.getElementById('carnival-select').value === '_new_' ? 'block' : 'none'; }
+    function handleTeamSelection() { const inp = document.getElementById('our-team-name'); inp.style.display = document.getElementById('team-select').value === '_new_' ? 'block' : 'none'; }
 
     async function fetchCarnivalsAndTeams() {
         const btn = document.getElementById('btn-fetch-cloud-meta'), originalText = btn.innerText;
-        btn.innerText = "⏳ Fetching from Cloud..."; btn.disabled = true;
+        btn.innerText = "⏳ Fetching..."; btn.disabled = true;
 
-        const userToken = getOrPromptToken();
+        let userToken = localStorage.getItem('netball_security_token');
+        if (!userToken) { userToken = prompt("🔑 Enter Security Token:"); localStorage.setItem('netball_security_token', userToken || ""); }
         if (!userToken) { btn.innerText = originalText; btn.disabled = false; return; }
 
         try {
@@ -701,15 +722,14 @@
             const resultText = await response.text();
             if (resultText === "Unauthorized") { alert("❌ Invalid Security Token."); localStorage.removeItem('netball_security_token'); return; }
             
-            const rawRows = JSON.parse(resultText);
-            const rows = getLatestRows(rawRows);
+            const rows = getLatestRows(JSON.parse(resultText));
             globalCloudData = rows; 
             
             let uniqueCarnivals = new Set(), uniqueTeams = new Set();
             if (Array.isArray(rows)) {
                 rows.forEach(row => {
-                    const rowCarnival = (row[13] || "Netball Carnival Tracker").trim(), rowTeam = (row[1] || "").trim(), player = row[6];
-                    if(rowCarnival !== "") uniqueCarnivals.add(rowCarnival); if(rowTeam !== "") uniqueTeams.add(rowTeam);
+                    const rowCarnival = (row[13] || "").trim(), rowTeam = (row[1] || "").trim(), player = row[6];
+                    if(rowCarnival) uniqueCarnivals.add(rowCarnival); if(rowTeam) uniqueTeams.add(rowTeam);
                     if (rowCarnival && rowTeam && player && player !== "No Data") {
                         const rKey = `${rowCarnival}::${rowTeam}`;
                         if (!rosters[rKey]) rosters[rKey] = [];
@@ -722,157 +742,72 @@
             const carnSel = document.getElementById('carnival-select'), teamSel = document.getElementById('team-select');
             let carnHtml = `<option value="_default_">-- Select Carnival --</option><option value="_new_">+ Create New Carnival...</option>`;
             uniqueCarnivals.forEach(c => carnHtml += `<option value="${c}">${c}</option>`);
-            carnSel.innerHTML = carnHtml; setupDropdownInitialState('carnival-select', 'carnival-name-input', carnivalName, "Netball Carnival Tracker");
+            carnSel.innerHTML = carnHtml; setupDropdownInitialState('carnival-select', 'carnival-name-input', carnivalName, "");
 
             let teamHtml = `<option value="_default_">-- Select Our Team --</option><option value="_new_">+ Create New Team...</option>`;
             uniqueTeams.forEach(t => teamHtml += `<option value="${t}">${t}</option>`);
-            teamSel.innerHTML = teamHtml; setupDropdownInitialState('team-select', 'our-team-name', savedOurTeamName, "Our Team");
-
-            buildPreviousCarnivalSummaries(rows); loadCurrentRoster(); renderHistory(); calculateCarnivalTotals(); getNextGameNumber();
-
-        } catch (err) { console.error(err); alert("⚠️ Failed to fetch meta data from Cloud."); } 
-        finally { btn.innerText = originalText; btn.disabled = false; }
+            teamSel.innerHTML = teamHtml; setupDropdownInitialState('team-select', 'our-team-name', savedOurTeamName, "");
+        } catch (err) { alert("⚠️ Failed to fetch from Cloud."); } finally { btn.innerText = originalText; btn.disabled = false; }
     }
 
     function buildPreviousCarnivalSummaries(rows) {
         const container = document.getElementById('previous-carnivals-container'); let carnStats = {};
-        
         rows.forEach(row => {
-            const rowCarnival = row[13] || "Netball Carnival Tracker";
-            const rowTeam = (row[1] || "").trim();
-            const player = row[6];
-            const goals = parseInt(row[8]) || 0;
-            const misses = parseInt(row[9]) || 0;
-            
-            // Only show history for the currently selected team, skipping the active carnival.
+            const rowCarnival = row[13] || "Netball Carnival Tracker", rowTeam = (row[1] || "").trim(), player = row[6], goals = parseInt(row[8]) || 0, misses = parseInt(row[9]) || 0;
             if(rowCarnival === carnivalName || rowTeam !== savedOurTeamName) return; 
-            
             if(!carnStats[rowCarnival]) carnStats[rowCarnival] = { goals: 0, misses: 0, players: {} };
-            carnStats[rowCarnival].goals += goals; 
-            carnStats[rowCarnival].misses += misses;
-            
+            carnStats[rowCarnival].goals += goals; carnStats[rowCarnival].misses += misses;
             if (player && player !== "No Data") {
                 if(!carnStats[rowCarnival].players[player]) carnStats[rowCarnival].players[player] = {goals: 0, misses: 0};
-                carnStats[rowCarnival].players[player].goals += goals;
-                carnStats[rowCarnival].players[player].misses += misses;
+                carnStats[rowCarnival].players[player].goals += goals; carnStats[rowCarnival].players[player].misses += misses;
             }
         });
 
         const sortedCarnivals = Object.keys(carnStats).sort();
-        if (sortedCarnivals.length === 0) { 
-            container.innerHTML = `<p style="color:#666; font-size:0.9rem; text-align: center;">No previous carnival records found for this team.</p>`; 
-            return; 
-        }
+        if (sortedCarnivals.length === 0) { container.innerHTML = `<p style="color:#666; font-size:0.9rem; text-align: center;">No previous carnival records found for this team.</p>`; return; }
 
         let html = "";
         sortedCarnivals.forEach(cName => {
             let data = carnStats[cName], shots = data.goals + data.misses, acc = shots > 0 ? Math.round((data.goals/shots)*100) : 0;
-            
             let playerHtml = Object.keys(data.players).map(p => {
-                let pStats = data.players[p];
-                let pShots = pStats.goals + pStats.misses;
-                let pAcc = pShots > 0 ? Math.round((pStats.goals/pShots)*100) : 0;
+                let pStats = data.players[p], pShots = pStats.goals + pStats.misses, pAcc = pShots > 0 ? Math.round((pStats.goals/pShots)*100) : 0;
                 return `<div><strong>👤 ${p}:</strong> ${pStats.goals}/${pShots} (${pAcc}%)</div>`;
             }).join('');
-            
             if(playerHtml === "") playerHtml = `<div style="color:#999; font-size:0.8rem; font-style:italic;">No individual player stats recorded.</div>`;
 
-            html += `
-                <div class="prev-carnival-summary-box">
-                    <div class="prev-carnival-title">🏆 ${cName}</div>
-                    <div style="display:flex; justify-content:space-between; font-size:0.9rem; margin-bottom: 8px;">
-                        <span>Team Goals: <strong>${data.goals}</strong></span>
-                        <span>Misses: <strong>${data.misses}</strong></span>
-                        <span>Accuracy: <strong>${acc}%</strong></span>
-                    </div>
-                    <div style="font-size:0.85rem; color:#475569; margin-bottom: 12px;">
-                        ${playerHtml}
-                    </div>
-                    <button class="btn-row-share" style="width: 100%;" onclick="sharePreviousCarnival('${cName.replace(/'/g, "\\'")}')">📢 Share Stats</button>
-                </div>
-            `;
+            html += `<div class="prev-carnival-summary-box"><div class="prev-carnival-title">🏆 ${cName}</div><div style="display:flex; justify-content:space-between; font-size:0.9rem; margin-bottom: 8px;"><span>Team Goals: <strong>${data.goals}</strong></span><span>Misses: <strong>${data.misses}</strong></span><span>Accuracy: <strong>${acc}%</strong></span></div><div style="font-size:0.85rem; color:#475569; margin-bottom: 12px;">${playerHtml}</div><button class="btn-row-share" style="width: 100%;" onclick="sharePreviousCarnival('${cName.replace(/'/g, "\\'")}')">📢 Share Stats</button></div>`;
         });
         container.innerHTML = html;
     }
 
     window.sharePreviousCarnival = function(cName) {
         if(!globalCloudData) return;
-        
         let data = { goals: 0, misses: 0, players: {} };
         globalCloudData.forEach(row => {
-            const rowCarnival = row[13] || "Netball Carnival Tracker";
-            const rowTeam = (row[1] || "").trim();
-            const player = row[6];
-            const goals = parseInt(row[8]) || 0;
-            const misses = parseInt(row[9]) || 0;
-            
+            const rowCarnival = row[13] || "", rowTeam = (row[1] || "").trim(), player = row[6], goals = parseInt(row[8]) || 0, misses = parseInt(row[9]) || 0;
             if(rowCarnival === cName && rowTeam === savedOurTeamName) {
-                data.goals += goals;
-                data.misses += misses;
+                data.goals += goals; data.misses += misses;
                 if (player && player !== "No Data") {
                     if(!data.players[player]) data.players[player] = {goals: 0, misses: 0};
-                    data.players[player].goals += goals;
-                    data.players[player].misses += misses;
+                    data.players[player].goals += goals; data.players[player].misses += misses;
                 }
             }
         });
-
-        let shots = data.goals + data.misses;
-        let acc = shots > 0 ? Math.round((data.goals/shots)*100) : 0;
-        
+        let shots = data.goals + data.misses, acc = shots > 0 ? Math.round((data.goals/shots)*100) : 0;
         let shareMessage = `🏆 CARNIVAL REPORT 🏆\n📍 ${cName}\n🛡️ Team: ${savedOurTeamName}\n\n📊 TEAM STATS\nGoals: ${data.goals}\nMisses: ${data.misses}\nAccuracy: ${acc}%\n\n🎯 SHOOTER SUMMARY\n`;
-        
         Object.keys(data.players).forEach(p => {
-            let pStats = data.players[p];
-            let pShots = pStats.goals + pStats.misses;
-            let pAcc = pShots > 0 ? Math.round((pStats.goals/pShots)*100) : 0;
+            let pStats = data.players[p], pShots = pStats.goals + pStats.misses, pAcc = pShots > 0 ? Math.round((pStats.goals/pShots)*100) : 0;
             if(pShots > 0) shareMessage += `👤 ${p}: ${pStats.goals}/${pShots} (${pAcc}%)\n`;
         });
-
         shareResult(shareMessage);
     };
 
-    async function getNextGameNumber() {
-        const input = document.getElementById('game-number-input');
-        input.value = "⏳ Fetching...";
-
-        let userToken = localStorage.getItem('netball_security_token');
-        if (!userToken) { fallbackGameNumber(); return; }
-
-        try {
-            const response = await fetch(`${GOOGLE_SHEETS_URL}?token=${encodeURIComponent(userToken)}`);
-            const resultText = await response.text();
-            if (resultText === "Unauthorized") throw new Error("Unauthorized");
-
-            const rawRows = JSON.parse(resultText);
-            const rows = getLatestRows(rawRows);
-            let maxGameNum = 0; const targetCarn = carnivalName, targetTeam = currentGame.ourTeam;
-            
-            if (Array.isArray(rows)) {
-                rows.forEach(row => {
-                    const rowCarnival = row[13] || "Netball Carnival Tracker", rowTeam = row[1] || "";
-                    if (rowCarnival === targetCarn && rowTeam === targetTeam) {
-                        const matchId = row[0]; 
-                        if (matchId) { const num = parseInt(matchId.replace(/\D/g, "")); if (!isNaN(num) && num > maxGameNum) maxGameNum = num; }
-                    }
-                });
-            }
-            const nextGameNum = maxGameNum + 1;
-            input.value = "Game " + nextGameNum; currentGame.gameNumber = "Game " + nextGameNum;
-        } catch (err) { console.error(err); fallbackGameNumber(); }
-    }
-
-    function fallbackGameNumber() {
-        const nextGameNum = getActiveHistory().length + 1;
-        document.getElementById('game-number-input').value = "Game " + nextGameNum;
-        currentGame.gameNumber = "Game " + nextGameNum;
-    }
+    function getNextGameNumber() { document.getElementById('game-number-input').value = "Game " + (getActiveHistory().length + 1); currentGame.gameNumber = "Game " + (getActiveHistory().length + 1); }
 
     function populateDropdowns() {
         const gsSel = document.getElementById('select-gs'), gaSel = document.getElementById('select-ga');
         let optionsHtml = players.map(p => `<option value="${p}">${p}</option>`).join('');
-        gsSel.innerHTML = `<option value="">-- Select GS --</option>` + optionsHtml;
-        gaSel.innerHTML = `<option value="">-- Select GA --</option>` + optionsHtml;
+        gsSel.innerHTML = `<option value="">-- Select GS --</option>` + optionsHtml; gaSel.innerHTML = `<option value="">-- Select GA --</option>` + optionsHtml;
     }
 
     function clearDropdownSelectors() { document.getElementById('select-gs').value = ""; document.getElementById('select-ga').value = ""; }
@@ -919,20 +854,11 @@
         });
     }
 
-    // UX Locking logic
-    function updateSetupLock() {
-        const isLocked = isGameActive();
-        document.getElementById('carnival-select').disabled = isLocked;
-        document.getElementById('carnival-name-input').disabled = isLocked;
-        document.getElementById('team-select').disabled = isLocked;
-        document.getElementById('our-team-name').disabled = isLocked;
-        document.getElementById('btn-fetch-cloud-meta').disabled = isLocked;
-    }
-
     function ensureTimestamp() {
         if (!currentGame.matchTimestamp) {
             currentGame.matchTimestamp = getCleanTimestamp();
             currentGame.log.unshift(`[SYSTEM] First action detected. Timestamp set: ${currentGame.matchTimestamp}`);
+            requestWakeLock();
         }
     }
 
@@ -972,7 +898,10 @@
 
     function resetCurrentGame() {
         if (!isGameActive() && currentGame.quartersData.length === 0) { alert("There is no active game data to discard."); return; }
-        if(confirm("🚨 WARNING: Are you sure you want to completely discard this entire game? ALL unsaved quarters and live stats will be permanently lost.")) resetLiveGame();
+        if(confirm("🚨 WARNING: Are you sure you want to completely discard this entire game? ALL unsaved quarters and live stats will be lost.")) {
+            releaseWakeLock();
+            resetLiveGame();
+        }
     }
 
     function editQuarter(targetQNum) {
@@ -1004,7 +933,16 @@
         assignShooters(); window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    function recordOppShot(isGoal) {
+    function triggerFlash(element, isGoal) {
+        if (!element) return;
+        const animClass = isGoal ? 'flash-green-anim' : 'flash-red-anim';
+        element.classList.remove(animClass);
+        void element.offsetWidth; // Force a reflow to restart animation
+        element.classList.add(animClass);
+    }
+
+    function recordOppShot(isGoal, btnElement) {
+        triggerFlash(btnElement, isGoal);
         ensureTimestamp();
         if (isGoal) currentGame.liveOpponent.goals++; else currentGame.liveOpponent.misses++;
         recalculateMatchScores(); currentGame.oppShotHistory.push(isGoal); currentGame.playByPlay.push({ team: 'Opp', actor: currentGame.opponent || "Opponent", isGoal: isGoal });
@@ -1013,24 +951,9 @@
         updateLiveUI();
     }
 
-    function undoOppShot() {
-        if (currentGame.oppShotHistory.length === 0) {
-            if (currentGame.liveOpponent.goals === 0 && currentGame.liveOpponent.misses === 0) { alert("No opponent shots to undo."); return; }
-            if (confirm(`No exact history found.\nClick OK to remove an OPPONENT GOAL.\nClick Cancel to remove an OPPONENT MISS.`)) {
-                if (currentGame.liveOpponent.goals > 0) currentGame.liveOpponent.goals--; else { alert("No goals to remove!"); return; }
-            } else {
-                if (currentGame.liveOpponent.misses > 0) currentGame.liveOpponent.misses--; else { alert("No misses to remove!"); return; }
-            }
-            recalculateMatchScores(); currentGame.log.unshift(`[UNDO] Manually adjusted Opponent stats.`); updateLiveUI(); return;
-        }
-        const lastShotWasGoal = currentGame.oppShotHistory.pop();
-        if (lastShotWasGoal) currentGame.liveOpponent.goals--; else currentGame.liveOpponent.misses--;
-        for (let i = currentGame.playByPlay.length - 1; i >= 0; i--) { if (currentGame.playByPlay[i].team === 'Opp') { currentGame.playByPlay.splice(i, 1); break; } }
-        recalculateMatchScores(); currentGame.log.unshift(`[UNDO] Removed last <strong>OPPONENT</strong> shot entry.`); updateLiveUI();
-    }
-
-    function recordShot(role, isGoal) {
+    function recordShot(role, isGoal, btnElement) {
         if ((role === 'gs' && (!currentGame.gsPlayer || currentGame.gsPlayer === "Unassigned")) || (role === 'ga' && (!currentGame.gaPlayer || currentGame.gaPlayer === "Unassigned"))) { alert("Please assign a player to this position first!"); return; }
+        triggerFlash(btnElement, isGoal);
         ensureTimestamp();
         const targetDataObj = role === 'gs' ? currentGame.liveGs : currentGame.liveGa, playerName = role === 'gs' ? currentGame.gsPlayer : currentGame.gaPlayer;
         if (isGoal) targetDataObj.goals++; else targetDataObj.misses++;
@@ -1040,23 +963,35 @@
         updateLiveUI(); updateSetupStatsDisplay();
     }
 
-    function undoShot(role) {
-        let targetIndex = -1;
-        for (let i = currentGame.shotHistory.length - 1; i >= 0; i--) { if (currentGame.shotHistory[i].role === role) { targetIndex = i; break; } }
-        const targetDataObj = role === 'gs' ? currentGame.liveGs : currentGame.liveGa;
-        if (targetIndex === -1) {
-            if (targetDataObj.goals === 0 && targetDataObj.misses === 0) { alert(`No shots to undo.`); return; }
-            if (confirm(`No exact history found.\nClick OK to remove GOAL.\nClick Cancel to remove MISS.`)) {
-                if (targetDataObj.goals > 0) targetDataObj.goals--; else { alert("No goals to remove!"); return; }
-            } else {
-                if (targetDataObj.misses > 0) targetDataObj.misses--; else { alert("No misses to remove!"); return; }
-            }
-            recalculateMatchScores(); currentGame.log.unshift(`[UNDO] Manually adjusted stats.`); updateLiveUI(); updateSetupStatsDisplay(); return;
+    function undoLastAction() {
+        if (!currentGame.playByPlay || currentGame.playByPlay.length === 0) {
+            alert("No actions to undo.");
+            return;
         }
-        const undoneShot = currentGame.shotHistory.splice(targetIndex, 1)[0];
-        if (undoneShot.isGoal) targetDataObj.goals--; else targetDataObj.misses--;
-        for (let i = currentGame.playByPlay.length - 1; i >= 0; i--) { if (currentGame.playByPlay[i].team === 'Us' && currentGame.playByPlay[i].role === role) { currentGame.playByPlay.splice(i, 1); break; } }
-        recalculateMatchScores(); currentGame.log.unshift(`[UNDO] Removed last ${role.toUpperCase()} shot.`); updateLiveUI(); updateSetupStatsDisplay();
+        const lastAction = currentGame.playByPlay.pop();
+
+        if (lastAction.team === 'Us') {
+            const role = lastAction.role;
+            const targetDataObj = role === 'gs' ? currentGame.liveGs : currentGame.liveGa;
+            
+            if (lastAction.isGoal) targetDataObj.goals--; 
+            else targetDataObj.misses--;
+            
+            // Pop directly from us shot history stack
+            currentGame.shotHistory.pop();
+            currentGame.log.unshift(`[UNDO] Removed last ${role.toUpperCase()} shot.`);
+        } else if (lastAction.team === 'Opp') {
+            if (lastAction.isGoal) currentGame.liveOpponent.goals--; 
+            else currentGame.liveOpponent.misses--;
+            
+            // Pop directly from opponent shot history stack
+            currentGame.oppShotHistory.pop();
+            currentGame.log.unshift(`[UNDO] Removed last OPPONENT shot.`);
+        }
+
+        recalculateMatchScores();
+        updateLiveUI();
+        updateSetupStatsDisplay();
     }
 
     function renderCurrentGameShooterTotals() {
@@ -1129,13 +1064,17 @@
         document.getElementById('raw-opp').innerHTML = `Quarter: ${currentGame.liveOpponent.goals}/${oppLiveShots} (${oppQuarterPct}%)<br>Game: ${totalOppGoals}/${totalOppShots} (${oppGamePct}%)`;
         
         const isGameStarted = isGameActive();
+        
         document.getElementById('live-log').innerHTML = currentGame.log.length ? currentGame.log.join('<br>') : (isGameStarted ? "Current quarter actions will show here..." : "The game will automatically start and lock your setup inputs when you track your first stat...");
         
         const qBtn = document.getElementById('quarter-btn'), qResetBtn = document.getElementById('quarter-reset-btn');
         if (currentGame.currentQuarter >= 5) { qBtn.style.display = "none"; qResetBtn.style.display = "none"; } else { qBtn.style.display = "block"; qResetBtn.style.display = "block"; qBtn.innerText = `⏱️ End Quarter ${currentGame.currentQuarter}`; }
         
         renderCurrentGameShooterTotals();
-        updateSetupLock(); 
+
+        // Dispatch a manual scroll event here to ensure the logic runs if we just started the game
+        // while already scrolled down the page.
+        window.dispatchEvent(new Event('scroll'));
     }
 
     function forceSaveCurrentQuarter() {
@@ -1178,12 +1117,7 @@
                 match.quartersBreakdown.forEach(q => {
                     cumulativeMisses += (q.gsMisses || 0) + (q.gaMisses || 0);
                     if (q.shotHistory && q.shotHistory.length > 0) {
-                        q.shotHistory.forEach(shot => {
-                            if (shot.name && individualStatsCache[shot.name]) {
-                                individualStatsCache[shot.name].shots++;
-                                if (shot.isGoal) individualStatsCache[shot.name].goals++;
-                            }
-                        });
+                        q.shotHistory.forEach(shot => { if (shot.name && individualStatsCache[shot.name]) { individualStatsCache[shot.name].shots++; if (shot.isGoal) individualStatsCache[shot.name].goals++; } });
                     } else {
                         if(q.gsName && individualStatsCache[q.gsName]) { individualStatsCache[q.gsName].goals += q.gsGoals || 0; individualStatsCache[q.gsName].shots += (q.gsGoals || 0) + (q.gsMisses || 0); }
                         if(q.gaName && individualStatsCache[q.gaName]) { individualStatsCache[q.gaName].goals += q.gaGoals || 0; individualStatsCache[q.gaName].shots += (q.gaGoals || 0) + (q.gaMisses || 0); }
@@ -1217,9 +1151,7 @@
         const netGoals = cumulativeGoals + liveMatchGoalsAddition, netMisses = cumulativeMisses + liveMatchMissesAddition, netShots = netGoals + netMisses;
         const combinedPct = netShots > 0 ? Math.round((netGoals / netShots) * 100) : 0;
         
-        document.getElementById('tot-goals').innerText = netGoals; 
-        document.getElementById('tot-misses').innerText = netMisses; 
-        document.getElementById('tot-pct').innerText = `${combinedPct}%`;
+        document.getElementById('tot-goals').innerText = netGoals; document.getElementById('tot-misses').innerText = netMisses; document.getElementById('tot-pct').innerText = `${combinedPct}%`;
 
         const playerTbody = document.getElementById('player-totals-rows');
         if (players.length === 0) { playerTbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#999;">No players in roster.</td></tr>`; return; }
@@ -1258,8 +1190,15 @@
 
     function generateCleanExportText(teamName, opponent, teamScore, oppScore, quartersBreakdown, options) {
         const cleanTeam = teamName ? teamName.trim() : "Team", cleanOpp = opponent ? opponent.trim() : "Opponent";
-        let winStatus = teamScore > oppScore ? "def" : (teamScore < oppScore ? "def by" : "drew with"), header = `GAME RESULT\n*${cleanTeam}* ${teamScore} ${winStatus} *${cleanOpp}* ${oppScore}\n\n`;
+        
+        let winStatus = teamScore > oppScore ? "def" : (teamScore < oppScore ? "def by" : "drew with");
+        let teamHdr = cleanTeam, oppHdr = cleanOpp;
+        if (teamScore > oppScore) teamHdr = `*${cleanTeam}*`;
+        else if (oppScore > teamScore) oppHdr = `*${cleanOpp}*`;
+        
+        let header = `GAME RESULT\n${teamHdr} ${teamScore} ${winStatus} ${oppHdr} ${oppScore}\n\n`;
         let totalsText = "";
+        
         if (options.includeTotals) {
             const matchStats = getMatchPlayerStats(quartersBreakdown);
             let matchSummaryText = Object.keys(matchStats).map(p => { let s = matchStats[p], pct = s.shots > 0 ? Math.round((s.goals/s.shots)*100) : 0; return `👤 ${p}: ${s.goals}/${s.shots} (${pct}%)`; }).join('\n');
@@ -1271,7 +1210,12 @@
             quartersBreakdown.forEach(q => {
                 let usQScore = 0, oppQScore = q.oppGoals || 0, qStats = getQuarterPlayerStats(q), playerTexts = [];
                 Object.keys(qStats).forEach(p => { let s = qStats[p]; usQScore += s.goals; let pct = s.shots > 0 ? Math.round((s.goals/s.shots)*100) : 0; playerTexts.push(`${p} ${s.goals}/${s.shots} (${pct}%)`); });
-                qText += `🔹 Q${q.quarterNumber}: ${cleanTeam} ${usQScore} - *${cleanOpp}* ${oppQScore}\n`;
+                
+                let qTeamName = cleanTeam, qOppName = cleanOpp;
+                if(usQScore > oppQScore) qTeamName = `*${cleanTeam}*`;
+                else if(oppQScore > usQScore) qOppName = `*${cleanOpp}*`;
+                
+                qText += `🔹 Q${q.quarterNumber}: ${qTeamName} ${usQScore} - ${qOppName} ${oppQScore}\n`;
                 if (playerTexts.length > 0) qText += `   ↳ ${playerTexts.join(', ')}\n`; else qText += `   ↳ No shots recorded\n`;
             });
             qText += "\n";
@@ -1294,34 +1238,9 @@
         return header + totalsText + qText + pbpText;
     }
 
-    function exportToCSV() {
-        const activeHistory = getActiveHistory();
-        if (activeHistory.length === 0) { alert("No active carnival history to export. Play and save a game first!"); return; }
-        let csvContent = "data:text/csv;charset=utf-8,";
-        csvContent += "Carnival,Game Number,Our Team,Opponent,Quarter,Team Qtr Goals,Opp Qtr Goals,Player Name,Position,Player Qtr Goals,Player Qtr Misses,Total Qtr Shots,Accuracy %,Timestamp\n";
-        activeHistory.forEach((m) => {
-            const matchName = m.gameNumber || `Game ${activeHistory.indexOf(m) + 1}`, team = m.ourTeam ? m.ourTeam.trim() : "Our Team", opp = m.opponent ? m.opponent.trim() : "Opponent", timestampVal = m.matchTimestamp || "";
-            if (m.quartersBreakdown) {
-                m.quartersBreakdown.forEach(q => {
-                    const qNum = q.quarterNumber, qStats = getQuarterPlayerStats(q); let hasUsData = false;
-                    Object.keys(qStats).forEach(playerName => {
-                        hasUsData = true; let s = qStats[playerName], pos = "Unknown";
-                        if (q.gsName === playerName) pos = "GS"; if (q.gaName === playerName) pos = "GA";
-                        let misses = s.shots - s.goals, pct = s.shots > 0 ? Math.round((s.goals / s.shots) * 100) : 0;
-                        csvContent += `"${carnivalName}","${matchName}","${team}","${opp}",${qNum},${s.goals},${q.oppGoals || 0},"${playerName}","${pos}",${s.goals},${misses},${s.shots},${pct}%,"${timestampVal}"\n`;
-                    });
-                    if (!hasUsData && (q.oppGoals || 0) > 0) csvContent += `"${carnivalName}","${matchName}","${team}","${opp}",${qNum},0,${q.oppGoals || 0},"No Data","-",0,0,0,0%,"${timestampVal}"\n`;
-                });
-            }
-        });
-        const encodedUri = encodeURI(csvContent), link = document.createElement("a");
-        link.setAttribute("href", encodedUri); link.setAttribute("download", `Netball_Data_${carnivalName}.csv`);
-        document.body.appendChild(link); link.click(); document.body.removeChild(link);
-    }
-
     async function autoPushToGoogleSheets(matchDataPayload) {
-        const userToken = getOrPromptToken();
-        if (!userToken) { alert("⚠️ Game saved locally, but data was not sent to Google Sheets because security authentication was skipped."); return; }
+        let userToken = localStorage.getItem('netball_security_token');
+        if (!userToken) { alert("⚠️ Game saved locally, but data was not sent to Google Sheets because security token is missing."); return; }
         
         let exportData = []; 
         const matchName = matchDataPayload.gameNumber || `Game ${getActiveHistory().length}`;
@@ -1349,60 +1268,7 @@
             const resultText = await response.text();
             if (resultText === "Unauthorized") { alert("❌ Invalid Security Token."); localStorage.removeItem('netball_security_token'); } 
             else console.log("✅ Game backup appended successfully.");
-        } catch (e) { alert("❌ Cloud Link Interrupted. Data saved locally, but failed to back up to Sheets."); console.error(e); }
-    }
-
-    async function syncFromGoogleSheets() {
-        const userToken = getOrPromptToken(); if (!userToken) { alert("❌ Token cannot be blank."); return; }
-        const syncBtn = document.getElementById("btn-sync-cloud"), originalText = syncBtn ? syncBtn.innerText : "";
-        if (syncBtn) { syncBtn.innerText = "⏳ Syncing Global Cloud..."; syncBtn.disabled = true; }
-        try {
-            const response = await fetch(`${GOOGLE_SHEETS_URL}?token=${encodeURIComponent(userToken)}`);
-            const resultText = await response.text();
-            if (resultText === "Unauthorized") { alert("❌ Invalid Security Token."); localStorage.removeItem('netball_security_token'); return; }
-            
-            const rawRows = JSON.parse(resultText); 
-            if (!Array.isArray(rawRows)) { alert("❌ Failed to parse data from server."); return; }
-            if (rawRows.length === 0) { alert("ℹ️ The Google Sheet is empty."); return; }
-            if (!confirm(`Syncing will pull ALL historical data from Google Sheets onto this device and rebuild your local storage matrix. Proceed?`)) return;
-
-            const rows = getLatestRows(rawRows);
-            globalCloudData = rows;
-
-            let matchesMap = {};
-            rows.forEach(row => {
-                const rowCarnival = (row[13] || "Netball Carnival Tracker").trim(), matchId = row[0], teamName = (row[1] || "Our Team").trim(), opponentName = (row[2] || "Opponent").trim(), qNum = parseInt(row[3]);
-                const player = row[6], pos = row[7], goals = parseInt(row[8]) || 0, misses = parseInt(row[9]) || 0, oppGoals = parseInt(row[5]) || 0, rowTimestamp = row[12] || null;
-                const uniqueKey = `${rowCarnival}::${teamName}::${matchId}`;
-                
-                if (!matchesMap[uniqueKey]) matchesMap[uniqueKey] = { carnivalName: rowCarnival, gameNumber: matchId, ourTeam: teamName, opponent: opponentName, matchTimestamp: rowTimestamp, quarters: {} };
-                if (!matchesMap[uniqueKey].quarters[qNum]) matchesMap[uniqueKey].quarters[qNum] = { quarterNumber: qNum, gsName: "", gaName: "", gsGoals: 0, gsMisses: 0, gaGoals: 0, gaMisses: 0, oppGoals: oppGoals, oppMisses: 0, shotHistory: [] };
-                let qObj = matchesMap[uniqueKey].quarters[qNum];
-                if (pos === "GS") { qObj.gsName = player; qObj.gsGoals += goals; qObj.gsMisses += misses; } else if (pos === "GA") { qObj.gaName = player; qObj.gaGoals += goals; qObj.gaMisses += misses; }
-                for (let g = 0; g < goals; g++) qObj.shotHistory.push({ role: pos.toLowerCase(), isGoal: true, name: player });
-                for (let m = 0; m < misses; m++) qObj.shotHistory.push({ role: pos.toLowerCase(), isGoal: false, name: player });
-                
-                if (player && player !== "No Data") {
-                    const rKey = `${rowCarnival}::${teamName}`;
-                    if (!rosters[rKey]) rosters[rKey] = [];
-                    if (!rosters[rKey].includes(player)) rosters[rKey].push(player);
-                }
-            });
-            let importedHistory = [];
-            Object.keys(matchesMap).forEach(key => {
-                const mData = matchesMap[key]; let quartersArr = Object.values(mData.quarters).sort((a, b) => a.quarterNumber - b.quarterNumber);
-                let teamScore = 0, opponentScore = 0;
-                quartersArr.forEach(q => { teamScore += (q.gsGoals + q.gaGoals); opponentScore += q.oppGoals; });
-                importedHistory.push({ carnivalName: mData.carnivalName, gameNumber: mData.gameNumber, ourTeam: mData.ourTeam, opponent: mData.opponent, teamScore: teamScore, opponentScore: opponentScore, quartersBreakdown: quartersArr, matchTimestamp: mData.matchTimestamp });
-            });
-            
-            carnivalHistory = importedHistory; localStorage.setItem('netball_history', JSON.stringify(carnivalHistory));
-            localStorage.setItem('netball_rosters', JSON.stringify(rosters));
-            
-            loadCurrentRoster(); renderHistory(); calculateCarnivalTotals(); updateLiveUI(); updateSetupStatsDisplay(); buildPreviousCarnivalSummaries(rows); 
-            getNextGameNumber();
-            alert("✅ Global Master Sync complete!");
-        } catch (err) { alert("❌ Sync failed."); console.error(err); } finally { if (syncBtn) { syncBtn.innerText = originalText; syncBtn.disabled = false; } }
+        } catch (e) { alert("❌ Cloud Link Interrupted. Data saved locally, but failed to back up to Sheets."); }
     }
 
     function hardResetApp() {
@@ -1435,22 +1301,15 @@
             saveBtn.innerText = "🔒 Finalising & Syncing..."; saveBtn.disabled = true; ensureTimestamp();
             
             const matchData = { 
-                carnivalName: carnivalName,
-                gameNumber: currentGame.gameNumber || `Game ${getActiveHistory().length + 1}`, 
-                ourTeam: currentGame.ourTeam, 
-                opponent: currentGame.opponent, 
-                teamScore: currentGame.matchTotalScore, 
-                opponentScore: currentGame.opponentTotalScore, 
-                quartersBreakdown: currentGame.quartersData, 
-                matchTimestamp: currentGame.matchTimestamp 
+                carnivalName: carnivalName, gameNumber: currentGame.gameNumber || `Game ${getActiveHistory().length + 1}`, 
+                ourTeam: currentGame.ourTeam, opponent: currentGame.opponent, teamScore: currentGame.matchTotalScore, 
+                opponentScore: currentGame.opponentTotalScore, quartersBreakdown: currentGame.quartersData, matchTimestamp: currentGame.matchTimestamp 
             };
             
-            carnivalHistory.push(matchData); 
-            localStorage.setItem('netball_history', JSON.stringify(carnivalHistory));
-            
-            renderHistory(); calculateCarnivalTotals(); 
-            await autoPushToGoogleSheets(matchData);
+            carnivalHistory.push(matchData); localStorage.setItem('netball_history', JSON.stringify(carnivalHistory));
+            renderHistory(); calculateCarnivalTotals(); await autoPushToGoogleSheets(matchData);
             saveBtn.innerText = origText; saveBtn.disabled = false; openShareModal(matchData, true);
+            releaseWakeLock();
         }
     }
 
@@ -1473,17 +1332,14 @@
         document.getElementById('game-number-input').value = currentGame.gameNumber; document.getElementById('display-our-team').innerText = currentGame.ourTeam; document.getElementById('opponent-name').value = currentGame.opponent;
         document.getElementById('display-opp').innerText = currentGame.opponent; document.getElementById('opp-card-title').innerHTML = `<strong>${currentGame.opponent.trim()}</strong>`;
         
-        carnivalHistory.splice(globalIndex, 1); 
-        localStorage.setItem('netball_history', JSON.stringify(carnivalHistory));
+        carnivalHistory.splice(globalIndex, 1); localStorage.setItem('netball_history', JSON.stringify(carnivalHistory));
         clearDropdownSelectors(); currentGame.gsPlayer = "Unassigned"; currentGame.gaPlayer = "Unassigned";
-        
         renderHistory(); calculateCarnivalTotals(); updateLiveUI(); window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function deleteSavedGame(globalIndex) {
         if (confirm("Are you sure you want to permanently delete this game from your local history?")) {
-            carnivalHistory.splice(globalIndex, 1); 
-            localStorage.setItem('netball_history', JSON.stringify(carnivalHistory));
+            carnivalHistory.splice(globalIndex, 1); localStorage.setItem('netball_history', JSON.stringify(carnivalHistory));
             renderHistory(); calculateCarnivalTotals(); updateSetupStatsDisplay(); updateLiveUI();
         }
     }
@@ -1492,7 +1348,6 @@
         if (navigator.share) { navigator.share({ title: 'Netball Game Summary', text: textToShare }).catch(() => { navigator.clipboard.writeText(textToShare); alert("Copied to clipboard instead!"); }); } 
         else { navigator.clipboard.writeText(textToShare).then(() => { alert("Stats copied to clipboard!"); }); }
     }
-    
     function sharePastGame(globalIndex) { const m = carnivalHistory[globalIndex]; openShareModal(m, false); }
 
     function renderHistory() {
@@ -1506,27 +1361,14 @@
         
         container.innerHTML = activeHistory.map((m) => {
             const globalIndex = carnivalHistory.indexOf(m);
-            let teamLabel = m.ourTeam || "Our Team"; 
-            const cleanOppName = m.opponent ? m.opponent.trim() : "Opponent";
+            let teamLabel = m.ourTeam || "Our Team"; const cleanOppName = m.opponent ? m.opponent.trim() : "Opponent";
             const displayMatchName = m.gameNumber || `Game ${activeHistory.indexOf(m) + 1}`;
             const dateStr = `<div style="font-size:0.75rem; color:#64748b; margin-top:2px;">📅 Started: ${m.matchTimestamp || "No timestamp recorded"}</div>`;
             
-            let tScore = m.teamScore || 0;
-            let oScore = m.opponentScore || 0;
-            
-            let teamDisplay = teamLabel;
-            let oppDisplay = cleanOppName;
-            
-            if (tScore > oScore) {
-                teamDisplay = `<strong>${teamLabel}</strong>`;
-                oppDisplay = `<span style="font-weight: normal;">${cleanOppName}</span>`;
-            } else if (oScore > tScore) {
-                teamDisplay = `<span style="font-weight: normal;">${teamLabel}</span>`;
-                oppDisplay = `<strong>${cleanOppName}</strong>`;
-            } else {
-                teamDisplay = `<span style="font-weight: normal;">${teamLabel}</span>`;
-                oppDisplay = `<span style="font-weight: normal;">${cleanOppName}</span>`;
-            }
+            let tScore = m.teamScore || 0, oScore = m.opponentScore || 0, teamDisplay = teamLabel, oppDisplay = cleanOppName;
+            if (tScore > oScore) { teamDisplay = `<strong>${teamLabel}</strong>`; oppDisplay = `<span style="font-weight: normal;">${cleanOppName}</span>`; } 
+            else if (oScore > tScore) { teamDisplay = `<span style="font-weight: normal;">${teamLabel}</span>`; oppDisplay = `<strong>${cleanOppName}</strong>`; } 
+            else { teamDisplay = `<span style="font-weight: normal;">${teamLabel}</span>`; oppDisplay = `<span style="font-weight: normal;">${cleanOppName}</span>`; }
 
             const matchStats = getMatchPlayerStats(m.quartersBreakdown || []);
             const matchSummaryHtml = Object.keys(matchStats).map(p => { let s = matchStats[p], pct = s.shots > 0 ? Math.round((s.goals/s.shots)*100) : 0; return `<div><strong>👤 ${p}:</strong> ${s.goals}/${s.shots} (${pct}%)</div>`; }).join('') || "<div>No player stats recorded.</div>";
@@ -1548,13 +1390,6 @@
         }).join('');
     }
 
-    function shareCarnivalTotals() {
-        const titleText = carnivalName || "Netball Carnival", totalGoals = document.getElementById('tot-goals').innerText, totalMisses = document.getElementById('tot-misses').innerText, overallPct = document.getElementById('tot-pct').innerText;
-        let shareMessage = `🏆 CARNIVAL FINAL REPORT 🏆\n📍 ${titleText}\n\n📊 TEAM STATS\nGoals: ${totalGoals}\nMisses: ${totalMisses}\nAccuracy: ${overallPct}\n\n🎯 SHOOTER SUMMARY\n`;
-        players.forEach(p => { const stats = individualStatsCache[p] || { goals: 0, shots: 0 }, accuracy = stats.shots > 0 ? Math.round((stats.goals / stats.shots) * 100) : 0; if(stats.shots > 0) shareMessage += `👤 ${p}: ${stats.goals}/${stats.shots} (${accuracy}%)\n`; });
-        shareResult(shareMessage);
-    }
-
     function resetLiveGame() {
         currentGame = { gameNumber: "", ourTeam: savedOurTeamName, opponent: "", currentQuarter: 1, matchTotalScore: 0, opponentTotalScore: 0, quartersData: [], liveGs: { goals: 0, misses: 0 }, liveGa: { goals: 0, misses: 0 }, liveOpponent: { goals: 0, misses: 0 }, gsPlayer: "", gaPlayer: "", runningGameTotals: {}, runningOppTotals: { goals: 0, shots: 0 }, log: [], shotHistory: [], oppShotHistory: [], playByPlay: [], matchTimestamp: null };
         document.getElementById('opponent-name').value = ""; document.getElementById('display-opp').innerText = "???"; document.getElementById('opp-card-title').innerHTML = `<strong>Opponent</strong>`;
@@ -1564,11 +1399,7 @@
 
     function clearCarnivalHistory() {
         if (confirm(`Delete ALL historical games specifically for [${carnivalName}] / [${savedOurTeamName}] from this device? This will not affect other setups.`)) {
-            carnivalHistory = carnivalHistory.filter(m => {
-                const mCarn = m.carnivalName || "Netball Carnival Tracker";
-                const mTeam = m.ourTeam || "Our Team";
-                return !(mCarn === carnivalName && mTeam === savedOurTeamName);
-            });
+            carnivalHistory = carnivalHistory.filter(m => { return !( (m.carnivalName || "Netball Carnival Tracker") === carnivalName && (m.ourTeam || "Our Team") === savedOurTeamName); });
             localStorage.setItem('netball_history', JSON.stringify(carnivalHistory)); 
             renderHistory(); calculateCarnivalTotals(); updateSetupStatsDisplay(); updateLiveUI(); getNextGameNumber();
         }
