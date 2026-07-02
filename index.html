@@ -411,6 +411,8 @@
                 <tbody id="player-totals-rows"></tbody>
             </table>
         </div>
+        
+        <button class="btn" onclick="exportCarnivalCSV()" style="background-color: var(--success); width: 100%; margin-top: 15px; padding: 12px; font-size: 1rem;">📊 Export Carnival CSV</button>
     </div>
 
     <div style="position: relative;">
@@ -1352,6 +1354,49 @@
     }
     function sharePastGame(globalIndex) { const m = carnivalHistory[globalIndex]; openShareModal(m, false); }
 
+    function exportGameCSV(globalIndex) {
+        const m = carnivalHistory[globalIndex];
+        let csvContent = "Quarter,Team,Player,Action,Us Score,Opp Score\n";
+
+        let runningUs = 0;
+        let runningOpp = 0;
+
+        if (m.quartersBreakdown) {
+            m.quartersBreakdown.forEach(q => {
+                if (q.playByPlay && q.playByPlay.length > 0) {
+                    q.playByPlay.forEach(p => {
+                        if (p.team === 'Us' && p.isGoal) runningUs++;
+                        if (p.team === 'Opp' && p.isGoal) runningOpp++;
+                        const teamName = p.team === 'Us' ? (m.ourTeam || "Us") : (m.opponent || "Opponent");
+                        const actionStr = p.isGoal ? "Goal" : "Miss";
+                        const actorClean = p.actor ? p.actor.trim().replace(/"/g, '""') : "Unknown";
+                        csvContent += `${q.quarterNumber},"${teamName}","${actorClean}","${actionStr}",${runningUs},${runningOpp}\n`;
+                    });
+                } else {
+                    // Handle legacy/no-pbp quarters by appending the end-of-quarter totals
+                    runningUs += (q.gsGoals || 0) + (q.gaGoals || 0);
+                    runningOpp += (q.oppGoals || 0);
+                    csvContent += `${q.quarterNumber},"Summary","No PBP Data","Quarter End",${runningUs},${runningOpp}\n`;
+                }
+            });
+        }
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        
+        const safeTeamName = (m.ourTeam || "Team").replace(/[^a-z0-9]/gi, '_');
+        const safeOppName = (m.opponent || "Opponent").replace(/[^a-z0-9]/gi, '_');
+        const gameNum = (m.gameNumber || `Game_${globalIndex+1}`).replace(/[^a-z0-9]/gi, '_');
+        
+        link.setAttribute("download", `${safeTeamName}_vs_${safeOppName}_${gameNum}_PBP.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }
+
     function renderHistory() {
         const container = document.getElementById('history-rows-container');
         const activeHistory = getActiveHistory();
@@ -1388,7 +1433,20 @@
                 }).join('');
             }
             
-            return `<div class="history-card"><div class="history-card-header"><div style="text-align: left;"><h4 style="margin: 0; color: #334155; font-size: 1.1rem;">${displayMatchName}: ${teamDisplay} vs ${oppDisplay}</h4>${dateStr}</div><div class="history-score">${tScore} - ${oScore}</div></div><div style="font-size: 0.9rem; color: #475569; margin-bottom: 5px; line-height: 1.4; text-align: left;">${matchSummaryHtml}${oppSummaryHtml}</div><div class="scrollable-quarter-data" style="text-align: left;">${qBreakdownHtml}</div><div class="history-actions"><button class="btn-edit-action" onclick="editSavedGame(${globalIndex})">✏️ Edit</button><button class="btn-row-share" onclick="sharePastGame(${globalIndex})">📢 Share</button><button class="btn-delete-action" onclick="deleteSavedGame(${globalIndex})">🗑️ Delete Game</button></div></div>`;
+            return `<div class="history-card">
+                        <div class="history-card-header">
+                            <div style="text-align: left;"><h4 style="margin: 0; color: #334155; font-size: 1.1rem;">${displayMatchName}: ${teamDisplay} vs ${oppDisplay}</h4>${dateStr}</div>
+                            <div class="history-score">${tScore} - ${oScore}</div>
+                        </div>
+                        <div style="font-size: 0.9rem; color: #475569; margin-bottom: 5px; line-height: 1.4; text-align: left;">${matchSummaryHtml}${oppSummaryHtml}</div>
+                        <div class="scrollable-quarter-data" style="text-align: left;">${qBreakdownHtml}</div>
+                        <div class="history-actions">
+                            <button class="btn-edit-action" onclick="editSavedGame(${globalIndex})">✏️ Edit</button>
+                            <button class="btn-row-share" onclick="sharePastGame(${globalIndex})">📢 Share</button>
+                            <button class="btn-row-share" onclick="exportGameCSV(${globalIndex})">📥 CSV</button>
+                            <button class="btn-delete-action" onclick="deleteSavedGame(${globalIndex})">🗑️ Delete Game</button>
+                        </div>
+                    </div>`;
         }).join('');
     }
 
@@ -1405,6 +1463,40 @@
             localStorage.setItem('netball_history', JSON.stringify(carnivalHistory)); 
             renderHistory(); calculateCarnivalTotals(); updateSetupStatsDisplay(); updateLiveUI(); getNextGameNumber();
         }
+    }
+
+    function exportCarnivalCSV() {
+        let csvContent = "Player,Goals,Misses,Total Shots,Accuracy %\n";
+
+        // Team Totals
+        const netGoals = parseInt(document.getElementById('tot-goals').innerText) || 0;
+        const netMisses = parseInt(document.getElementById('tot-misses').innerText) || 0;
+        const netShots = netGoals + netMisses;
+        const combinedPct = netShots > 0 ? Math.round((netGoals / netShots) * 100) : 0;
+        
+        csvContent += `"Team Total",${netGoals},${netMisses},${netShots},${combinedPct}%\n`;
+
+        // Individual Player Stats
+        players.forEach(p => {
+            const stats = individualStatsCache[p] || { goals: 0, shots: 0 };
+            const misses = stats.shots - stats.goals;
+            const accuracy = stats.shots > 0 ? Math.round((stats.goals / stats.shots) * 100) : 0;
+            csvContent += `"${p}",${stats.goals},${misses},${stats.shots},${accuracy}%\n`;
+        });
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        
+        const safeTeamName = (savedOurTeamName || "Team").replace(/[^a-z0-9]/gi, '_');
+        const safeCarnivalName = (carnivalName || "Carnival").replace(/[^a-z0-9]/gi, '_');
+        link.setAttribute("download", `${safeTeamName}_${safeCarnivalName}_Stats.csv`);
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
     }
 </script>
 </body>
