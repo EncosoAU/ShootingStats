@@ -182,6 +182,7 @@
         
         /* Unified Navigation Buttons Header */
         .btn-nav { flex: 1; padding: 8px; font-size: 0.85rem; border-radius: 4px; font-weight: bold; cursor: pointer; text-align: center; border: 1px solid; }
+        .btn-nav-sync { background-color: rgba(14, 165, 233, 0.1) !important; border-color: #7dd3fc !important; color: #0ea5e9 !important; }
         .btn-nav-stats { background-color: rgba(139, 92, 246, 0.1) !important; border-color: #c4b5fd !important; color: #7c3aed !important; }
         .btn-nav-change { background-color: rgba(71, 85, 105, 0.1) !important; border-color: #cbd5e1 !important; color: #475569 !important; }
 
@@ -230,7 +231,7 @@
 
 <div id="start-page" class="container" style="max-width: 450px; margin-top: 40px;">
     <div class="card" style="text-align: center; padding: 30px 20px;">
-        <h1 style="margin-bottom: 10px; font-size: 2.2rem;">Netball Shooting Stats</h1>
+        <h1 style="margin-bottom: 10px; font-size: 2.2rem;">Netball Tracker</h1>
         <p style="color: #64748b; margin-bottom: 25px; font-size: 0.95rem;">Select your configuration to begin.</p>
         
         <button class="btn" id="btn-fetch-cloud-meta" onclick="fetchCarnivalsAndTeams()" style="background-color: #0ea5e9; width:100%; margin-bottom: 25px; padding: 12px;">☁️ Fetch Cloud Carnivals</button>
@@ -259,8 +260,9 @@
 
 <div id="main-app" class="container" style="display: none;">
     <header style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; padding: 0 5px;">
-        <h1 id="carnival-title-display" style="text-align: center; margin: 0; line-height: 1.2;">Netball Shooting Stats</h1>
+        <h1 id="carnival-title-display" style="text-align: center; margin: 0; line-height: 1.2;">Netball Tracker</h1>
         <div style="display: flex; gap: 8px; width: 100%;">
+            <button class="btn-nav btn-nav-sync" id="btn-sync-current" onclick="syncCurrentTeamData()">☁️ Sync</button>
             <button class="btn-nav btn-nav-stats" onclick="goToStatsPage()">📊 View Statistics</button>
             <button class="btn-nav btn-nav-change" onclick="goBackToStart()">🔄 Change Team</button>
         </div>
@@ -662,6 +664,25 @@
         window.scrollTo({ top: 0 });
         
         btn.innerText = "✅ Confirm & Load Data"; btn.disabled = false;
+    }
+
+    async function syncCurrentTeamData() {
+        const btn = document.getElementById('btn-sync-current');
+        const origText = btn.innerHTML;
+        
+        btn.innerHTML = "⏳ Syncing...";
+        btn.disabled = true;
+
+        await syncSpecificData(carnivalName, savedOurTeamName);
+
+        loadCurrentRoster(); 
+        renderHistory(); 
+        calculateCarnivalTotals(); 
+        getNextGameNumber();
+        updateSetupStatsDisplay();
+        
+        btn.innerHTML = "☁️ Sync";
+        btn.disabled = false;
     }
 
     async function syncSpecificData(targetCarnival, targetTeam) {
@@ -1322,12 +1343,24 @@
         if (matchDataPayload.quartersBreakdown) {
             matchDataPayload.quartersBreakdown.forEach(q => {
                 const qNum = q.quarterNumber, qStats = getQuarterPlayerStats(q); let hasUsData = false;
+                
                 Object.keys(qStats).forEach(playerName => {
                     hasUsData = true; let s = qStats[playerName], pos = "Unknown";
-                    if (q.gsName === playerName) pos = "GS"; if (q.gaName === playerName) pos = "GA";
+                    
+                    if (q.shotHistory && q.shotHistory.length > 0) {
+                        const playedRoles = [...new Set(q.shotHistory.filter(shot => shot.name === playerName).map(shot => shot.role.toUpperCase()))];
+                        if (playedRoles.length > 0) pos = playedRoles.join('/');
+                    }
+                    
+                    if (pos === "Unknown") {
+                        if (q.gsName === playerName) pos = "GS"; 
+                        if (q.gaName === playerName) pos = "GA";
+                    }
+
                     let misses = s.shots - s.goals, pct = s.shots > 0 ? Math.round((s.goals / s.shots) * 100) : 0;
                     exportData.push([matchName, team, opp, qNum, s.goals, q.oppGoals || 0, playerName, pos, s.goals, misses, s.shots, `${pct}%`, finalTimestamp, carnivalName, pushTimestamp]);
                 });
+                
                 if (!hasUsData && (q.oppGoals || 0) > 0) exportData.push([matchName, team, opp, qNum, 0, q.oppGoals || 0, "No Data", "-", 0, 0, 0, "0%", finalTimestamp, carnivalName, pushTimestamp]);
             });
         }
@@ -1423,7 +1456,7 @@
 
     function exportGameCSV(globalIndex) {
         const m = carnivalHistory[globalIndex];
-        let csvContent = "Quarter,Team,Player,Action,Us Score,Opp Score\n";
+        let csvContent = "Quarter,Team,Player,Role,Action,Us Score,Opp Score\n";
 
         let runningUs = 0;
         let runningOpp = 0;
@@ -1437,13 +1470,14 @@
                         const teamName = p.team === 'Us' ? (m.ourTeam || "Us") : (m.opponent || "Opponent");
                         const actionStr = p.isGoal ? "Goal" : "Miss";
                         const actorClean = p.actor ? p.actor.trim().replace(/"/g, '""') : "Unknown";
-                        csvContent += `${q.quarterNumber},"${teamName}","${actorClean}","${actionStr}",${runningUs},${runningOpp}\n`;
+                        const roleClean = p.role ? p.role.toUpperCase() : "-";
+                        csvContent += `${q.quarterNumber},"${teamName}","${actorClean}","${roleClean}","${actionStr}",${runningUs},${runningOpp}\n`;
                     });
                 } else {
                     // Handle legacy/no-pbp quarters by appending the end-of-quarter totals
                     runningUs += (q.gsGoals || 0) + (q.gaGoals || 0);
                     runningOpp += (q.oppGoals || 0);
-                    csvContent += `${q.quarterNumber},"Summary","No PBP Data","Quarter End",${runningUs},${runningOpp}\n`;
+                    csvContent += `${q.quarterNumber},"Summary","No PBP Data","-","Quarter End",${runningUs},${runningOpp}\n`;
                 }
             });
         }
@@ -1471,7 +1505,7 @@
             return;
         }
 
-        let csvContent = "Game,Quarter,Team,Player,Action,Us Score,Opp Score\n";
+        let csvContent = "Game,Quarter,Team,Player,Role,Action,Us Score,Opp Score\n";
 
         activeHistory.forEach((m, idx) => {
             const gameName = (m.gameNumber || `Game_${idx+1}`).replace(/"/g, '""');
@@ -1487,12 +1521,13 @@
                             const teamName = p.team === 'Us' ? (m.ourTeam || "Us") : (m.opponent || "Opponent");
                             const actionStr = p.isGoal ? "Goal" : "Miss";
                             const actorClean = p.actor ? p.actor.trim().replace(/"/g, '""') : "Unknown";
-                            csvContent += `"${gameName}",${q.quarterNumber},"${teamName}","${actorClean}","${actionStr}",${runningUs},${runningOpp}\n`;
+                            const roleClean = p.role ? p.role.toUpperCase() : "-";
+                            csvContent += `"${gameName}",${q.quarterNumber},"${teamName}","${actorClean}","${roleClean}","${actionStr}",${runningUs},${runningOpp}\n`;
                         });
                     } else {
                         runningUs += (q.gsGoals || 0) + (q.gaGoals || 0);
                         runningOpp += (q.oppGoals || 0);
-                        csvContent += `"${gameName}",${q.quarterNumber},"Summary","No PBP Data","Quarter End",${runningUs},${runningOpp}\n`;
+                        csvContent += `"${gameName}",${q.quarterNumber},"Summary","No PBP Data","-","Quarter End",${runningUs},${runningOpp}\n`;
                     }
                 });
             }
