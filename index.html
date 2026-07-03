@@ -306,8 +306,8 @@
         </div>
 
         <div class="setup-stats-grid">
-            <div class="setup-stat-box" id="setup-gs-stats"><strong>GS Bench Stats:</strong> Select a player</div>
             <div class="setup-stat-box" id="setup-ga-stats"><strong>GA Bench Stats:</strong> Select a player</div>
+            <div class="setup-stat-box" id="setup-gs-stats"><strong>GS Bench Stats:</strong> Select a player</div>
         </div>
     </div>
 
@@ -2160,7 +2160,10 @@
 
     function resetLiveGame() {
         currentGame = { gameNumber: "", ourTeam: savedOurTeamName, opponent: "", currentQuarter: 1, matchTotalScore: 0, opponentTotalScore: 0, quartersData: [], liveGs: { goals: 0, misses: 0 }, liveGa: { goals: 0, misses: 0 }, liveOpponent: { goals: 0, misses: 0 }, gsPlayer: "", gaPlayer: "", runningGameTotals: {}, runningOppTotals: { goals: 0, shots: 0 }, log: [], shotHistory: [], oppShotHistory: [], playByPlay: [], matchTimestamp: null, isDirty: false, originalQuarterBackup: null, isEditMode: false, loadedPastGame: false };
+        
+        populateOpponentDropdown(); // Refresh the list with the newly saved opponent
         setupDropdownInitialState('opponent-select', 'opponent-name-input', "", "");
+        
         document.getElementById('display-opp').innerText = "???"; document.getElementById('opp-card-title').innerHTML = `<strong>Opponent</strong>`;
         clearDropdownSelectors(); currentGame.gsPlayer = "Unassigned"; currentGame.gaPlayer = "Unassigned"; document.getElementById('name-gs').innerText = "Unassigned"; document.getElementById('name-ga').innerText = "Unassigned";
         calculateCarnivalTotals(); updateLiveUI(); updateSetupStatsDisplay(); getNextGameNumber();
