@@ -153,7 +153,7 @@
         .history-table th, .history-table td { padding: 8px; border-bottom: 1px solid #eee; vertical-align: middle; text-align: center; }
         .history-table th { background: #f0f0f0; }
 
-        .history-card { border: 1px solid #e2e8f0; border-left: 5px solid var(--primary); border-radius: 8px; padding: 15px; margin-bottom: 12px; background: #ffffff; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .history-card { border: 1px solid #e2e8f0; border-left: 5px solid var(--primary); border-radius: 8px; padding: 15px; margin-bottom: 12px; background: #ffffff; box-shadow: 0 2px 4px rgba(0,0,0,0.02); position: relative; }
         .history-card-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; margin-bottom: 10px; }
         .history-score { font-size: 1.2rem; font-weight: bold; color: var(--primary); text-align: right; }
         .scrollable-quarter-data { max-height: 140px; overflow-y: auto; background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0; font-size: 0.85rem; margin-top: 12px; color: #334155; }
@@ -185,6 +185,8 @@
         .prev-carnival-title { font-weight: bold; color: var(--primary); border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 8px; font-size: 1.05rem; }
 
         .chart-container { position: relative; height: 30vh; width: 100%; }
+        
+        .sync-badge { position: absolute; top: -10px; right: -5px; background: var(--danger); color: white; padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
 
         @media (max-width: 650px) {
             .score-banner.compact { border-radius: 0; border-left: none; border-right: none; }
@@ -261,7 +263,7 @@
     <div class="card">
         <h3>2. Opponent & History</h3>
         <div class="form-group">
-            <input type="text" id="game-number-input" placeholder="Game Number (Fetching...)" readonly style="background-color: #e2e8f0; cursor: not-allowed; font-weight: bold; color: var(--neutral-dark);">
+            <input type="text" id="game-number-input" placeholder="Game Number" readonly style="background-color: #e2e8f0; cursor: not-allowed; font-weight: bold; color: var(--neutral-dark);">
         </div>
         
         <div class="form-group responsive-stack">
@@ -449,7 +451,10 @@
     <details class="card" style="border-left: 5px solid #10b981;">
         <summary>App Management</summary>
         <div class="details-content">
-            <div class="form-group" style="gap:8px; margin-bottom: 0; margin-top: 10px;">
+            <div class="form-group" style="gap:8px; margin-bottom: 10px; margin-top: 10px;">
+                <button class="btn" id="btn-sync-pending" onclick="syncPendingGames()" style="background-color: #0ea5e9; font-size: 0.9rem; padding: 10px; width: 100%;">🔄 Sync Pending Local Games</button>
+            </div>
+            <div class="form-group" style="gap:8px; margin-bottom: 0;">
                 <button class="btn" onclick="hardResetApp()" style="background-color: var(--danger); font-size: 0.9rem; padding: 10px; width: 100%;">🚨 Wipe App (Clean Slate)</button>
             </div>
         </div>
@@ -554,7 +559,6 @@
         isDirty: false, originalQuarterBackup: null, isEditMode: false, loadedPastGame: false 
     };
 
-    // Chart.js instances
     let chartShootersInstance = null;
     let chartGamesInstance = null;
     let chartQuartersInstance = null;
@@ -576,23 +580,13 @@
         if (anchor && wrapper && banner) {
             if (isGameActive()) {
                 const anchorRect = anchor.getBoundingClientRect();
-                
                 if (anchorRect.bottom < 0) {
-                    if (!banner.classList.contains('compact')) {
-                        wrapper.style.height = banner.offsetHeight + 'px';
-                        banner.classList.add('compact');
-                    }
+                    if (!banner.classList.contains('compact')) { wrapper.style.height = banner.offsetHeight + 'px'; banner.classList.add('compact'); }
                 } else {
-                    if (banner.classList.contains('compact')) {
-                        banner.classList.remove('compact');
-                        wrapper.style.height = 'auto'; 
-                    }
+                    if (banner.classList.contains('compact')) { banner.classList.remove('compact'); wrapper.style.height = 'auto'; }
                 }
             } else {
-                if (banner.classList.contains('compact')) {
-                    banner.classList.remove('compact');
-                    wrapper.style.height = 'auto';
-                }
+                if (banner.classList.contains('compact')) { banner.classList.remove('compact'); wrapper.style.height = 'auto'; }
             }
         }
     });
@@ -636,41 +630,19 @@
                         document.getElementById('select-gs').value = players.includes(currentGame.gsPlayer) ? currentGame.gsPlayer : "";
                         document.getElementById('select-ga').value = players.includes(currentGame.gaPlayer) ? currentGame.gaPlayer : "";
                         
-                        rebuildRunningTotals();
-                        recalculateMatchScores();
-                        updateLiveUI();
-                        updateSetupStatsDisplay();
-                        renderOpponentHistory(currentGame.opponent);
+                        rebuildRunningTotals(); recalculateMatchScores(); updateLiveUI(); updateSetupStatsDisplay(); renderOpponentHistory(currentGame.opponent);
                         
                         document.getElementById('start-page').style.display = 'none';
                         document.getElementById('main-app').style.display = 'block';
                         window.scrollTo({ top: 0, behavior: 'smooth' });
-                    } else {
-                        localStorage.removeItem('netball_current_draft');
-                    }
+                    } else { localStorage.removeItem('netball_current_draft'); }
                 }
-            } catch(e) {
-                localStorage.removeItem('netball_current_draft');
-            }
+            } catch(e) { localStorage.removeItem('netball_current_draft'); }
         }
     }
 
-    async function requestWakeLock() {
-        if ('wakeLock' in navigator) {
-            try {
-                if (wakeLock === null) {
-                    wakeLock = await navigator.wakeLock.request('screen');
-                }
-            } catch (err) { console.error(`${err.name}, ${err.message}`); }
-        }
-    }
-    function releaseWakeLock() {
-        if (wakeLock !== null) {
-            wakeLock.release().then(() => {
-                wakeLock = null;
-            });
-        }
-    }
+    async function requestWakeLock() { if ('wakeLock' in navigator) { try { if (wakeLock === null) wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {} } }
+    function releaseWakeLock() { if (wakeLock !== null) { wakeLock.release().then(() => { wakeLock = null; }); } }
 
     function sortCarnivalHistory() {
         carnivalHistory.sort((a, b) => {
@@ -680,336 +652,52 @@
         });
     }
 
-    async function pushRosterToCloud(playerName, action = "Roster_Update") {
-        let userToken = localStorage.getItem('netball_security_token');
-        if (!userToken || !playerName) return;
-        
-        const pushTimestamp = Date.now();
-        let exportData = [[action, savedOurTeamName, "None", "Roster", 0, 0, playerName, "Squad", 0, 0, 0, "0%", getCleanTimestamp(), carnivalName, pushTimestamp, "[]"]];
-        
-        try {
-            const payload = { token: userToken, matchData: exportData };
-            fetch(GOOGLE_SHEETS_URL, { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'text/plain;charset=utf-8' } });
-        } catch (e) {
-            console.log(`Failed to push roster ${action} to cloud.`);
-        }
-    }
+    // --- DRY Cloud Parsing Function ---
+    function processCloudRowsToMatches(rows) {
+        let matchesMap = {};
+        let tempRosters = {};
+        let uniqueCarnivals = new Set();
+        let uniqueTeams = new Set();
 
-    function goBackToStart() {
-        if (isGameActive()) { if(!confirm("You have an active game running. Going back will discard current unsaved game progress. Proceed?")) return; }
-        releaseWakeLock();
-        
-        let userToken = localStorage.getItem('netball_security_token'); 
-        localStorage.clear();
-        if (userToken) localStorage.setItem('netball_security_token', userToken);
+        if (!Array.isArray(rows)) return { matchesMap, tempRosters, uniqueCarnivals, uniqueTeams };
 
-        carnivalHistory = [];
-        allTeamHistory = [];
-        rosters = {};
-        players = [];
-        carnivalName = "";
-        savedOurTeamName = "";
-        
-        document.getElementById('carnival-select').innerHTML = `<option value="_default_">-- Select Carnival --</option><option value="_new_">+ Create New Carnival...</option>`;
-        document.getElementById('team-select').innerHTML = `<option value="_default_">-- Select Our Team --</option><option value="_new_">+ Create New Team...</option>`;
-        document.getElementById('carnival-select').value = '_default_';
-        document.getElementById('team-select').value = '_default_';
-        document.getElementById('carnival-name-input').value = '';
-        document.getElementById('our-team-name').value = '';
-        document.getElementById('carnival-name-input').style.display = 'none';
-        document.getElementById('our-team-name').style.display = 'none';
-        
-        document.getElementById('main-app').style.display = 'none';
-        document.getElementById('stats-page').style.display = 'none';
-        document.getElementById('start-page').style.display = 'block';
+        rows.forEach(row => {
+            const rowCarnival = String(row[13] || "Netball Carnival Tracker").trim();
+            const teamName = String(row[1] || "Our Team").trim();
+            const player = row[6];
+            const matchId = String(row[0]);
 
-        fetchCarnivalsAndTeams();
-    }
+            if(row[13]) uniqueCarnivals.add(String(row[13]).trim());
+            if(row[1]) uniqueTeams.add(String(row[1]).trim());
 
-    function goToStatsPage() {
-        document.getElementById('main-app').style.display = 'none';
-        document.getElementById('stats-page').style.display = 'block';
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        renderStatistics();
-    }
-
-    function goBackToMainFromStats() {
-        document.getElementById('stats-page').style.display = 'none';
-        document.getElementById('main-app').style.display = 'block';
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    async function confirmStartSelection() {
-        const selCarnival = document.getElementById('carnival-select').value === '_new_' ? document.getElementById('carnival-name-input').value.trim() : document.getElementById('carnival-select').value;
-        const selTeam = document.getElementById('team-select').value === '_new_' ? document.getElementById('our-team-name').value.trim() : document.getElementById('team-select').value;
-
-        if (!selCarnival || selCarnival === '_default_') { alert("Please select or enter a Carnival."); return; }
-        if (!selTeam || selTeam === '_default_') { alert("Please select or enter a Team."); return; }
-
-        const btn = document.getElementById('btn-confirm-start');
-        btn.innerText = "⏳ Loading Data..."; btn.disabled = true;
-        
-        carnivalName = selCarnival;
-        savedOurTeamName = selTeam;
-        localStorage.setItem('netball_carnival_name', carnivalName);
-        localStorage.setItem('netball_our_team_name', savedOurTeamName);
-
-        await syncSpecificData(carnivalName, savedOurTeamName);
-
-        refreshDynamicHeaders();
-        currentGame.ourTeam = savedOurTeamName;
-        loadCurrentRoster(); 
-        renderHistory(); 
-        calculateCarnivalTotals(); 
-        getNextGameNumber();
-        populateOpponentDropdown();
-        setupDropdownInitialState('opponent-select', 'opponent-name-input', "", "");
-        updateLiveUI(); 
-        updateSetupStatsDisplay();
-        
-        document.getElementById('start-page').style.display = 'none';
-        document.getElementById('main-app').style.display = 'block';
-        window.scrollTo({ top: 0 });
-        
-        btn.innerText = "✅ Confirm & Load Data"; btn.disabled = false;
-        
-        startAutoSave();
-        checkDraftOnLoad();
-    }
-
-    function populateOpponentDropdown() {
-        let uniqueOpponents = new Set();
-        
-        carnivalHistory.forEach(m => {
-            if (m.opponent && m.opponent !== "???" && m.opponent !== "None") uniqueOpponents.add(m.opponent.trim());
-        });
-        
-        if (globalCloudData) {
-            globalCloudData.forEach(row => {
-                const rTeam = String(row[1] || "").trim();
-                const rOpp = String(row[2] || "").trim();
-                if (rTeam === savedOurTeamName && rOpp && rOpp !== "Opponent" && rOpp !== "???" && rOpp !== "None") {
-                    uniqueOpponents.add(rOpp);
+            if (rowCarnival && teamName && player && player !== "No Data" && player !== "Summary") {
+                const rKey = `${rowCarnival}::${teamName}`;
+                if (!tempRosters[rKey]) tempRosters[rKey] = [];
+                if (matchId === "Roster_Delete") {
+                    tempRosters[rKey] = tempRosters[rKey].filter(p => p !== player);
+                } else {
+                    if (!tempRosters[rKey].includes(player)) tempRosters[rKey].push(player);
                 }
-            });
-        }
-        
-        const sel = document.getElementById('opponent-select');
-        let html = `<option value="_default_">-- Select Opponent --</option><option value="_new_">+ Add New Opponent...</option>`;
-        Array.from(uniqueOpponents).sort().forEach(opp => {
-            html += `<option value="${opp}">${opp}</option>`;
-        });
-        sel.innerHTML = html;
-    }
-
-    function handleOpponentSelection() {
-        const sel = document.getElementById('opponent-select');
-        const inp = document.getElementById('opponent-name-input');
-        let oppName = "";
-        
-        if (sel.value === '_new_') {
-            inp.style.display = 'block';
-            oppName = inp.value.trim();
-        } else {
-            inp.style.display = 'none';
-            oppName = sel.value === '_default_' ? "" : sel.value;
-        }
-        
-        updateOpponent(oppName);
-    }
-
-    function updateOpponent(name) {
-        currentGame.opponent = name || "???";
-        document.getElementById('display-opp').innerText = currentGame.opponent;
-        document.getElementById('opp-card-title').innerHTML = `<strong>${currentGame.opponent.trim()}</strong>`;
-        renderOpponentHistory(currentGame.opponent);
-        updateLiveUI();
-    }
-
-    function renderOpponentHistory(oppName) {
-        const container = document.getElementById('opponent-history-container');
-        if (!oppName || oppName === "???") {
-            container.innerHTML = `<p style="color:#666; font-size:0.85rem; text-align: center; margin-top: 5px;">Select an opponent to view past matches.</p>`;
-            return;
-        }
-        
-        let combined = [...allTeamHistory];
-        let uniqueMatches = {};
-        combined.forEach(m => { uniqueMatches[`${m.carnivalName}::${m.gameNumber}`] = m; });
-        carnivalHistory.forEach(m => { uniqueMatches[`${m.carnivalName}::${m.gameNumber}`] = m; });
-        
-        let past = Object.values(uniqueMatches).filter(m => m.opponent === oppName && m.ourTeam === savedOurTeamName);
-        
-        if (past.length === 0) {
-            container.innerHTML = `<p style="color:#666; font-size:0.85rem; text-align: center; margin-top: 5px;">No previous matches found against ${oppName}.</p>`;
-            return;
-        }
-        
-        past.reverse(); 
-        
-        let html = "";
-        past.forEach(m => {
-            let teamGoals = m.teamScore || 0;
-            let oppGoals = m.opponentScore || 0;
-            let res = teamGoals > oppGoals ? `<span style='color:var(--success);font-weight:bold;'>WIN (${teamGoals} - ${oppGoals})</span>` : (teamGoals < oppGoals ? `<span style='color:var(--danger);font-weight:bold;'>LOSS (${teamGoals} - ${oppGoals})</span>` : `<span style='color:var(--warning);font-weight:bold;'>DRAW (${teamGoals} - ${oppGoals})</span>`);
-            
-            let teamMisses = 0;
-            let oppMisses = 0;
-            
-            if (m.quartersBreakdown) {
-               m.quartersBreakdown.forEach(q => {
-                   teamMisses += (q.gsMisses || 0) + (q.gaMisses || 0);
-                   oppMisses += (q.oppMisses || 0);
-               });
             }
-            
-            let teamShots = teamGoals + teamMisses;
-            let oppShots = oppGoals + oppMisses;
-            
-            let teamAcc = teamShots > 0 ? Math.round((teamGoals / teamShots) * 100) : 0;
-            let oppAcc = oppShots > 0 ? Math.round((oppGoals / oppShots) * 100) : 0;
 
-            const matchStats = getMatchPlayerStats(m.quartersBreakdown || []);
-            let playerHtml = Object.keys(matchStats).map(p => { 
-                let s = matchStats[p]; 
-                let pct = s.shots > 0 ? Math.round((s.goals/s.shots)*100) : 0; 
-                return `<div><span style="display:inline-block; width: 15px;">👤</span> <strong>${p}:</strong> ${s.goals}/${s.shots} (${pct}%)</div>`; 
-            }).join('');
-            
-            if (!playerHtml) playerHtml = `<div style="color: #999; font-style: italic;">No player stats recorded.</div>`;
-            
-            html += `
-            <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; margin-bottom: 12px; background: #ffffff;">
-                <div style="display:flex; justify-content:space-between; margin-bottom:6px; border-bottom: 1px solid #f1f5f9; padding-bottom: 6px;">
-                    <strong>${m.matchTimestamp || 'Unknown Date'}</strong>
-                    ${res}
-                </div>
-                <div style="color:var(--primary); margin-bottom:10px; font-size: 0.9rem; font-weight: 500;">🏆 ${m.carnivalName}</div>
-                
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
-                    <div style="background: #f8fafc; padding: 8px; border-radius: 4px; border: 1px dashed #cbd5e1;">
-                        <div style="font-size: 0.8rem; font-weight: bold; color: var(--primary); margin-bottom: 4px;">🛡️ Team</div>
-                        <div style="font-size: 0.85rem; color: #475569;">Goals: <strong>${teamGoals}</strong><br>Misses: ${teamMisses}<br>Accuracy: <strong>${teamAcc}%</strong></div>
-                    </div>
-                    <div style="background: #f8fafc; padding: 8px; border-radius: 4px; border: 1px dashed #cbd5e1;">
-                        <div style="font-size: 0.8rem; font-weight: bold; color: var(--danger); margin-bottom: 4px;">⚔️ ${oppName}</div>
-                        <div style="font-size: 0.85rem; color: #475569;">Goals: <strong>${oppGoals}</strong><br>Misses: ${oppMisses}<br>Accuracy: <strong>${oppAcc}%</strong></div>
-                    </div>
-                </div>
-                
-                <div style="font-size: 0.85rem; color: #334155;">
-                    <div style="font-weight: bold; margin-bottom: 4px; border-bottom: 1px solid #f1f5f9; padding-bottom: 2px;">Individual Performance</div>
-                    ${playerHtml}
-                </div>
-            </div>`;
+            const qNumRaw = String(row[3]);
+            if (!matchId || matchId === "Roster_Update" || matchId === "Roster_Delete" || qNumRaw === "Roster") return;
+
+            const opponentName = String(row[2] || "Opponent").trim(), qNum = parseInt(qNumRaw);
+            const pos = row[7], goals = parseInt(row[8]) || 0, misses = parseInt(row[9]) || 0, oppGoals = parseInt(row[5]) || 0, rowTimestamp = row[12] || null;
+            const uniqueKey = `${rowCarnival}::${teamName}::${matchId}`;
+
+            if (!matchesMap[uniqueKey]) matchesMap[uniqueKey] = { carnivalName: rowCarnival, gameNumber: matchId, ourTeam: teamName, opponent: opponentName, matchTimestamp: rowTimestamp, quarters: {} };
+            if (!matchesMap[uniqueKey].quarters[qNum]) matchesMap[uniqueKey].quarters[qNum] = { quarterNumber: qNum, gsName: "", gaName: "", gsGoals: 0, gsMisses: 0, gaGoals: 0, gaMisses: 0, oppGoals: oppGoals, oppMisses: 0, shotHistory: [], oppShotHistory: [], playByPlay: [], pbpLoadedFromCloud: false };
+
+            let qObj = matchesMap[uniqueKey].quarters[qNum];
+            if (pos === "GS") { qObj.gsName = player; qObj.gsGoals += goals; qObj.gsMisses += misses; }
+            else if (pos === "GA") { qObj.gaName = player; qObj.gaGoals += goals; qObj.gaMisses += misses; }
+
+            qObj.playByPlay = []; qObj.shotHistory = []; qObj.oppShotHistory = [];
         });
-        container.innerHTML = html;
-    }
 
-    async function syncSpecificData(targetCarnival, targetTeam) {
-        let userToken = localStorage.getItem('netball_security_token');
-        if (!userToken) {
-            userToken = prompt("🔑 Enter Security Token to download your team's historical data (Leave blank to start fresh):");
-            if (!userToken) return;
-            localStorage.setItem('netball_security_token', userToken.trim());
-        }
-
-        try {
-            const response = await fetch(`${GOOGLE_SHEETS_URL}?token=${encodeURIComponent(userToken)}&fetchType=summary`);
-            const resultText = await response.text();
-            if (resultText === "Unauthorized") { alert("❌ Invalid Token. Starting fresh local instance."); localStorage.removeItem('netball_security_token'); return; }
-            
-            const rawRows = JSON.parse(resultText); 
-            if (!Array.isArray(rawRows)) return;
-
-            const rows = getLatestRows(rawRows);
-            globalCloudData = rows;
-            buildPreviousCarnivalSummaries(rows);
-
-            carnivalHistory = []; 
-            allTeamHistory = [];
-            rosters = {}; 
-
-            let matchesMap = {};
-
-            rows.forEach(row => {
-                const rowCarnival = String(row[13] || "Netball Carnival Tracker").trim(), matchId = String(row[0]), teamName = String(row[1] || "Our Team").trim();
-                const player = row[6];
-                
-                if (rowCarnival && teamName && player && player !== "No Data" && player !== "Summary") {
-                    const rKey = `${rowCarnival}::${teamName}`;
-                    if (!rosters[rKey]) rosters[rKey] = [];
-                    
-                    if (matchId === "Roster_Delete") {
-                        rosters[rKey] = rosters[rKey].filter(p => p !== player);
-                    } else {
-                        if (!rosters[rKey].includes(player)) rosters[rKey].push(player);
-                    }
-                }
-
-                if (teamName !== targetTeam) return;
-
-                const qNumRaw = String(row[3]);
-                if (matchId === "Roster_Update" || matchId === "Roster_Delete" || qNumRaw === "Roster") return;
-
-                const opponentName = String(row[2] || "Opponent").trim(), qNum = parseInt(qNumRaw);
-                const pos = row[7], goals = parseInt(row[8]) || 0, misses = parseInt(row[9]) || 0, oppGoals = parseInt(row[5]) || 0, rowTimestamp = row[12] || null;
-                const uniqueKey = `${rowCarnival}::${teamName}::${matchId}`;
-                
-                if (!matchesMap[uniqueKey]) matchesMap[uniqueKey] = { carnivalName: rowCarnival, gameNumber: matchId, ourTeam: teamName, opponent: opponentName, matchTimestamp: rowTimestamp, quarters: {} };
-                
-                if (!matchesMap[uniqueKey].quarters[qNum]) {
-                    matchesMap[uniqueKey].quarters[qNum] = { quarterNumber: qNum, gsName: "", gaName: "", gsGoals: 0, gsMisses: 0, gaGoals: 0, gaMisses: 0, oppGoals: oppGoals, oppMisses: 0, shotHistory: [], oppShotHistory: [], playByPlay: [], pbpLoadedFromCloud: false };
-                }
-                
-                let qObj = matchesMap[uniqueKey].quarters[qNum];
-                if (pos === "GS") { qObj.gsName = player; qObj.gsGoals += goals; qObj.gsMisses += misses; } 
-                else if (pos === "GA") { qObj.gaName = player; qObj.gaGoals += goals; qObj.gaMisses += misses; }
-                
-                qObj.playByPlay = [];
-                qObj.shotHistory = [];
-                qObj.oppShotHistory = [];
-            });
-
-            Object.keys(matchesMap).forEach(key => {
-                const mData = matchesMap[key]; 
-                let quartersArr = Object.values(mData.quarters).sort((a, b) => a.quarterNumber - b.quarterNumber);
-                let teamScore = 0, opponentScore = 0, teamMisses = 0;
-                quartersArr.forEach(q => { teamScore += (q.gsGoals + q.gaGoals); opponentScore += q.oppGoals; teamMisses += (q.gsMisses + q.gaMisses); });
-                
-                let mObj = { 
-                    carnivalName: mData.carnivalName, 
-                    gameNumber: mData.gameNumber, 
-                    ourTeam: mData.ourTeam, 
-                    opponent: mData.opponent, 
-                    teamScore: teamScore, 
-                    opponentScore: opponentScore, 
-                    teamMisses: teamMisses,
-                    quartersBreakdown: quartersArr, 
-                    matchTimestamp: mData.matchTimestamp 
-                };
-                
-                allTeamHistory.push(mObj);
-                
-                if (mData.carnivalName === targetCarnival) {
-                    carnivalHistory.push(mObj);
-                }
-            });
-            
-            sortCarnivalHistory(); 
-            localStorage.setItem('netball_history', JSON.stringify(carnivalHistory));
-            localStorage.setItem('netball_rosters', JSON.stringify(rosters));
-
-        } catch (err) { console.error("Cloud fetch failed", err); }
-    }
-
-    function refreshDynamicHeaders() {
-        const cName = carnivalName || "Netball Carnival";
-        const tName = savedOurTeamName || "Our Team";
-        document.getElementById('carnival-title-display').innerText = `${tName} @ ${cName}`;
-        document.getElementById('active-carnival-stats-header').innerText = `Carnival Stats: ${tName} @ ${cName}`;
-        document.getElementById('history-log-summary').innerHTML = `📂 History: ${tName} @ ${cName}`;
-        document.getElementById('prev-carnivals-summary').innerHTML = `📂 Previous Carnivals: ${tName}`;
+        return { matchesMap, tempRosters, uniqueCarnivals, uniqueTeams };
     }
 
     function getLatestRows(rows) {
@@ -1027,9 +715,7 @@
             const gameKey = `${cName}::${tName}::${gNum}::${qNum}`;
             const ts = parseInt(row[14]) || 0; 
             
-            if (!(gameKey in latestTimestamps) || ts > latestTimestamps[gameKey]) {
-                latestTimestamps[gameKey] = ts;
-            }
+            if (!(gameKey in latestTimestamps) || ts > latestTimestamps[gameKey]) latestTimestamps[gameKey] = ts;
         });
         
         return rows.filter(row => {
@@ -1045,39 +731,6 @@
         });
     }
 
-    function getActiveHistory() { return carnivalHistory.filter(m => { return (m.carnivalName || "Netball Carnival Tracker") === carnivalName && (m.ourTeam || "Our Team") === savedOurTeamName; }); }
-    function getCurrentRosterKey() { return `${carnivalName}::${savedOurTeamName}`; }
-    function loadCurrentRoster() { players = rosters[getCurrentRosterKey()] || []; renderRosterTags(); populateDropdowns(); }
-
-    function getCleanTimestamp() {
-        const now = new Date(), days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        let hours = now.getHours(), minutes = now.getMinutes(), ampm = hours >= 12 ? 'pm' : 'am';
-        hours = hours % 12; hours = hours ? hours : 12; minutes = minutes < 10 ? '0' + minutes : minutes;
-        return `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()} at ${hours}:${minutes}${ampm}`;
-    }
-
-    function isGameActive() {
-        const activeLiveShots = currentGame.liveGs.goals + currentGame.liveGs.misses + currentGame.liveGa.goals + currentGame.liveGa.misses + currentGame.liveOpponent.goals + currentGame.liveOpponent.misses;
-        return (currentGame.matchTimestamp !== null || activeLiveShots > 0 || currentGame.quartersData.length > 0);
-    }
-
-    function setupDropdownInitialState(selectId, inputId, currentValue, defaultValue) {
-        const sel = document.getElementById(selectId), inp = document.getElementById(inputId);
-        if(currentValue && currentValue !== defaultValue) {
-            let exists = Array.from(sel.options).some(opt => opt.value === currentValue);
-            if (!exists) sel.innerHTML += `<option value="${currentValue}">${currentValue}</option>`;
-            sel.value = currentValue; 
-            inp.style.display = 'none';
-        } else { 
-            sel.value = "_default_"; 
-            inp.style.display = 'none'; 
-            inp.value = ""; 
-        }
-    }
-
-    function handleCarnivalSelection() { const inp = document.getElementById('carnival-name-input'); inp.style.display = document.getElementById('carnival-select').value === '_new_' ? 'block' : 'none'; }
-    function handleTeamSelection() { const inp = document.getElementById('our-team-name'); inp.style.display = document.getElementById('team-select').value === '_new_' ? 'block' : 'none'; }
-
     async function fetchCarnivalsAndTeams() {
         const btn = document.getElementById('btn-fetch-cloud-meta'), originalText = btn.innerText;
         btn.innerText = "⏳ Fetching..."; btn.disabled = true;
@@ -1091,30 +744,17 @@
             const resultText = await response.text();
             if (resultText === "Unauthorized") { alert("❌ Invalid Security Token."); localStorage.removeItem('netball_security_token'); return; }
             
-            const rows = getLatestRows(JSON.parse(resultText));
+            let rawRows;
+            try { rawRows = JSON.parse(resultText); } catch(e) { console.error("Invalid JSON from Cloud"); alert("Cloud Error. Try again later."); return; }
+            
+            const rows = getLatestRows(rawRows);
             globalCloudData = rows; 
             
-            rosters = {};
-            carnivalHistory = [];
+            const { tempRosters, uniqueCarnivals, uniqueTeams } = processCloudRowsToMatches(rows);
             
-            let uniqueCarnivals = new Set(), uniqueTeams = new Set();
-            if (Array.isArray(rows)) {
-                rows.forEach(row => {
-                    const rowCarnival = String(row[13] || "").trim(), rowTeam = String(row[1] || "").trim(), player = row[6], matchId = String(row[0]);
-                    if(rowCarnival) uniqueCarnivals.add(rowCarnival); if(rowTeam) uniqueTeams.add(rowTeam);
-                    if (rowCarnival && rowTeam && player && player !== "No Data" && player !== "Summary") {
-                        const rKey = `${rowCarnival}::${rowTeam}`;
-                        if (!rosters[rKey]) rosters[rKey] = [];
-                        if (matchId === "Roster_Delete") {
-                            rosters[rKey] = rosters[rKey].filter(p => p !== player);
-                        } else {
-                            if (!rosters[rKey].includes(player)) rosters[rKey].push(player);
-                        }
-                    }
-                });
-            }
+            // Non-destructive roster merge
+            Object.keys(tempRosters).forEach(k => { rosters[k] = tempRosters[k]; });
             localStorage.setItem('netball_rosters', JSON.stringify(rosters));
-            localStorage.setItem('netball_history', JSON.stringify(carnivalHistory));
 
             const carnSel = document.getElementById('carnival-select'), teamSel = document.getElementById('team-select');
             let carnHtml = `<option value="_default_">-- Select Carnival --</option><option value="_new_">+ Create New Carnival...</option>`;
@@ -1126,6 +766,279 @@
             teamSel.innerHTML = teamHtml; setupDropdownInitialState('team-select', 'our-team-name', savedOurTeamName, "");
         } catch (err) { alert("⚠️ Failed to fetch from Cloud."); } finally { btn.innerText = originalText; btn.disabled = false; }
     }
+
+    async function syncSpecificData(targetCarnival, targetTeam) {
+        let userToken = localStorage.getItem('netball_security_token');
+        if (!userToken) {
+            userToken = prompt("🔑 Enter Security Token to download your team's historical data (Leave blank to start fresh):");
+            if (!userToken) return;
+            localStorage.setItem('netball_security_token', userToken.trim());
+        }
+
+        try {
+            const response = await fetch(`${GOOGLE_SHEETS_URL}?token=${encodeURIComponent(userToken)}&fetchType=summary`);
+            const resultText = await response.text();
+            if (resultText === "Unauthorized") { alert("❌ Invalid Token. Starting fresh local instance."); localStorage.removeItem('netball_security_token'); return; }
+            
+            let rawRows;
+            try { rawRows = JSON.parse(resultText); } catch(e) { console.error("Invalid JSON during specific sync"); return; }
+            if (!Array.isArray(rawRows)) return;
+
+            const rows = getLatestRows(rawRows);
+            globalCloudData = rows;
+            buildPreviousCarnivalSummaries(rows);
+
+            const { matchesMap, tempRosters } = processCloudRowsToMatches(rows);
+
+            // Roster Merge
+            Object.keys(tempRosters).forEach(k => { rosters[k] = tempRosters[k]; });
+            localStorage.setItem('netball_rosters', JSON.stringify(rosters));
+
+            // Format cloud matches array
+            let cloudMatches = [];
+            Object.keys(matchesMap).forEach(key => {
+                const mData = matchesMap[key]; 
+                let quartersArr = Object.values(mData.quarters).sort((a, b) => a.quarterNumber - b.quarterNumber);
+                let teamScore = 0, opponentScore = 0, teamMisses = 0;
+                quartersArr.forEach(q => { teamScore += (q.gsGoals + q.gaGoals); opponentScore += q.oppGoals; teamMisses += (q.gsMisses + q.gaMisses); });
+                
+                cloudMatches.push({ 
+                    carnivalName: mData.carnivalName, gameNumber: mData.gameNumber, ourTeam: mData.ourTeam, 
+                    opponent: mData.opponent, teamScore: teamScore, opponentScore: opponentScore, teamMisses: teamMisses,
+                    quartersBreakdown: quartersArr, matchTimestamp: mData.matchTimestamp, isSynced: true 
+                });
+            });
+
+            // Non-Destructive Data Merge
+            let newCarnivalHistory = [];
+            let allKeys = new Set([...carnivalHistory.map(m => `${m.carnivalName}::${m.ourTeam}::${m.gameNumber}`), ...cloudMatches.filter(m => m.carnivalName === targetCarnival).map(m => `${m.carnivalName}::${m.ourTeam}::${m.gameNumber}`)]);
+
+            allKeys.forEach(k => {
+                let localM = carnivalHistory.find(m => `${m.carnivalName}::${m.ourTeam}::${m.gameNumber}` === k);
+                let cloudM = cloudMatches.find(m => `${m.carnivalName}::${m.ourTeam}::${m.gameNumber}` === k);
+
+                // If local has it and it's NOT synced yet, protect the local copy. Otherwise take cloud truth.
+                if (localM && localM.isSynced === false) { newCarnivalHistory.push(localM); } 
+                else if (cloudM) { newCarnivalHistory.push(cloudM); } 
+                else if (localM) { newCarnivalHistory.push(localM); }
+            });
+
+            carnivalHistory = newCarnivalHistory;
+            allTeamHistory = cloudMatches; // In-memory reference for other features
+            
+            sortCarnivalHistory(); 
+            localStorage.setItem('netball_history', JSON.stringify(carnivalHistory));
+
+        } catch (err) { console.error("Cloud fetch failed", err); }
+    }
+
+    async function pushRosterToCloud(playerName, action = "Roster_Update") {
+        let userToken = localStorage.getItem('netball_security_token');
+        if (!userToken || !playerName) return;
+        const pushTimestamp = Date.now();
+        let exportData = [[action, savedOurTeamName, "None", "Roster", 0, 0, playerName, "Squad", 0, 0, 0, "0%", getCleanTimestamp(), carnivalName, pushTimestamp, "[]"]];
+        try { fetch(GOOGLE_SHEETS_URL, { method: 'POST', body: JSON.stringify({ token: userToken, matchData: exportData }), headers: { 'Content-Type': 'text/plain;charset=utf-8' } }); } catch (e) {}
+    }
+
+    async function autoPushToGoogleSheets(matchDataPayload) {
+        let userToken = localStorage.getItem('netball_security_token');
+        if (!userToken) return false; 
+        
+        let exportData = []; 
+        const matchName = matchDataPayload.gameNumber || `Game ${getActiveHistory().length}`;
+        const team = matchDataPayload.ourTeam ? matchDataPayload.ourTeam.trim() : "Our Team";
+        const opp = matchDataPayload.opponent ? matchDataPayload.opponent.trim() : "Opponent";
+        const finalTimestamp = matchDataPayload.matchTimestamp || "";
+        const pushTimestamp = Date.now(); 
+
+        if (matchDataPayload.quartersBreakdown) {
+            matchDataPayload.quartersBreakdown.forEach(q => {
+                const qNum = q.quarterNumber;
+                let hasUsData = false;
+                const pbpString = JSON.stringify(q.playByPlay || []);
+                const exportStats = getQuarterPlayerStatsForExport(q);
+                
+                exportStats.forEach(s => {
+                    hasUsData = true; 
+                    let misses = s.shots - s.goals;
+                    let pct = s.shots > 0 ? Math.round((s.goals / s.shots) * 100) : 0;
+                    exportData.push([matchName, team, opp, qNum, s.goals, q.oppGoals || 0, s.name, s.role, s.goals, misses, s.shots, `${pct}%`, finalTimestamp, carnivalName, pushTimestamp, pbpString]);
+                });
+                if (!hasUsData && (q.oppGoals || 0) > 0) exportData.push([matchName, team, opp, qNum, 0, q.oppGoals || 0, "No Data", "-", 0, 0, 0, "0%", finalTimestamp, carnivalName, pushTimestamp, pbpString]);
+            });
+        }
+        if (exportData.length === 0) return true; // Technically nothing to push, so mark synced
+        
+        try {
+            const response = await fetch(GOOGLE_SHEETS_URL, { method: 'POST', body: JSON.stringify({ token: userToken, matchData: exportData }), headers: { 'Content-Type': 'text/plain;charset=utf-8' } });
+            const resultText = await response.text();
+            if (resultText === "Unauthorized") { localStorage.removeItem('netball_security_token'); return false; } 
+            return true;
+        } catch (e) { return false; }
+    }
+
+    async function syncPendingGames() {
+        const syncBtn = document.getElementById('btn-sync-pending');
+        const ogText = syncBtn.innerText;
+        syncBtn.innerText = "🔄 Pushing Data..."; syncBtn.disabled = true;
+
+        let userToken = localStorage.getItem('netball_security_token');
+        if (!userToken) { userToken = prompt("🔑 Enter Security Token to sync pending games:"); localStorage.setItem('netball_security_token', userToken || ""); }
+        if (!userToken) { syncBtn.innerText = ogText; syncBtn.disabled = false; return; }
+
+        let successCount = 0, failCount = 0;
+        
+        for (let i = 0; i < carnivalHistory.length; i++) {
+            if (carnivalHistory[i].isSynced === false) {
+                const success = await autoPushToGoogleSheets(carnivalHistory[i]);
+                if (success) { carnivalHistory[i].isSynced = true; successCount++; } 
+                else failCount++;
+            }
+        }
+        
+        localStorage.setItem('netball_history', JSON.stringify(carnivalHistory));
+        renderHistory();
+        
+        syncBtn.innerText = ogText; syncBtn.disabled = false;
+        if (successCount > 0 && failCount === 0) alert(`✅ Successfully synced ${successCount} offline games to the cloud!`);
+        else if (failCount > 0) alert(`⚠️ Synced ${successCount} games, but ${failCount} failed. Check your connection.`);
+        else alert("Everything is already up to date!");
+    }
+
+    // --- Decoupled Game Numbering ---
+    function getNextGameNumber() {
+        const localActive = getActiveHistory();
+        let nextNum = localActive.length + 1;
+        document.getElementById('game-number-input').value = "Game " + nextNum; 
+        currentGame.gameNumber = "Game " + nextNum;
+    }
+
+    function goBackToStart() {
+        if (isGameActive()) { if(!confirm("You have an active game running. Going back will discard current unsaved game progress. Proceed?")) return; }
+        releaseWakeLock();
+        
+        let userToken = localStorage.getItem('netball_security_token'); 
+        localStorage.clear();
+        if (userToken) localStorage.setItem('netball_security_token', userToken);
+
+        carnivalHistory = []; allTeamHistory = []; rosters = {}; players = []; carnivalName = ""; savedOurTeamName = "";
+        
+        document.getElementById('carnival-select').innerHTML = `<option value="_default_">-- Select Carnival --</option><option value="_new_">+ Create New Carnival...</option>`;
+        document.getElementById('team-select').innerHTML = `<option value="_default_">-- Select Our Team --</option><option value="_new_">+ Create New Team...</option>`;
+        document.getElementById('carnival-select').value = '_default_'; document.getElementById('team-select').value = '_default_';
+        document.getElementById('carnival-name-input').value = ''; document.getElementById('our-team-name').value = '';
+        document.getElementById('carnival-name-input').style.display = 'none'; document.getElementById('our-team-name').style.display = 'none';
+        
+        document.getElementById('main-app').style.display = 'none'; document.getElementById('stats-page').style.display = 'none'; document.getElementById('start-page').style.display = 'block';
+
+        fetchCarnivalsAndTeams();
+    }
+
+    function goToStatsPage() { document.getElementById('main-app').style.display = 'none'; document.getElementById('stats-page').style.display = 'block'; window.scrollTo({ top: 0, behavior: 'smooth' }); renderStatistics(); }
+    function goBackToMainFromStats() { document.getElementById('stats-page').style.display = 'none'; document.getElementById('main-app').style.display = 'block'; window.scrollTo({ top: 0, behavior: 'smooth' }); }
+
+    async function confirmStartSelection() {
+        const selCarnival = document.getElementById('carnival-select').value === '_new_' ? document.getElementById('carnival-name-input').value.trim() : document.getElementById('carnival-select').value;
+        const selTeam = document.getElementById('team-select').value === '_new_' ? document.getElementById('our-team-name').value.trim() : document.getElementById('team-select').value;
+
+        if (!selCarnival || selCarnival === '_default_') { alert("Please select or enter a Carnival."); return; }
+        if (!selTeam || selTeam === '_default_') { alert("Please select or enter a Team."); return; }
+
+        const btn = document.getElementById('btn-confirm-start');
+        btn.innerText = "⏳ Loading Data..."; btn.disabled = true;
+        
+        carnivalName = selCarnival; savedOurTeamName = selTeam;
+        localStorage.setItem('netball_carnival_name', carnivalName); localStorage.setItem('netball_our_team_name', savedOurTeamName);
+
+        await syncSpecificData(carnivalName, savedOurTeamName);
+
+        refreshDynamicHeaders(); currentGame.ourTeam = savedOurTeamName; loadCurrentRoster(); renderHistory(); calculateCarnivalTotals(); getNextGameNumber(); populateOpponentDropdown();
+        setupDropdownInitialState('opponent-select', 'opponent-name-input', "", ""); updateLiveUI(); updateSetupStatsDisplay();
+        
+        document.getElementById('start-page').style.display = 'none'; document.getElementById('main-app').style.display = 'block'; window.scrollTo({ top: 0 });
+        btn.innerText = "✅ Confirm & Load Data"; btn.disabled = false;
+        
+        startAutoSave(); checkDraftOnLoad();
+    }
+
+    function populateOpponentDropdown() {
+        let uniqueOpponents = new Set();
+        carnivalHistory.forEach(m => { if (m.opponent && m.opponent !== "???" && m.opponent !== "None") uniqueOpponents.add(m.opponent.trim()); });
+        if (globalCloudData) { globalCloudData.forEach(row => { const rTeam = String(row[1] || "").trim(); const rOpp = String(row[2] || "").trim(); if (rTeam === savedOurTeamName && rOpp && rOpp !== "Opponent" && rOpp !== "???" && rOpp !== "None") uniqueOpponents.add(rOpp); }); }
+        
+        const sel = document.getElementById('opponent-select');
+        let html = `<option value="_default_">-- Select Opponent --</option><option value="_new_">+ Add New Opponent...</option>`;
+        Array.from(uniqueOpponents).sort().forEach(opp => { html += `<option value="${opp}">${opp}</option>`; }); sel.innerHTML = html;
+    }
+
+    function handleOpponentSelection() {
+        const sel = document.getElementById('opponent-select'), inp = document.getElementById('opponent-name-input');
+        let oppName = "";
+        if (sel.value === '_new_') { inp.style.display = 'block'; oppName = inp.value.trim(); } else { inp.style.display = 'none'; oppName = sel.value === '_default_' ? "" : sel.value; }
+        updateOpponent(oppName);
+    }
+
+    function updateOpponent(name) {
+        currentGame.opponent = name || "???";
+        document.getElementById('display-opp').innerText = currentGame.opponent; document.getElementById('opp-card-title').innerHTML = `<strong>${currentGame.opponent.trim()}</strong>`;
+        renderOpponentHistory(currentGame.opponent); updateLiveUI();
+    }
+
+    function renderOpponentHistory(oppName) {
+        const container = document.getElementById('opponent-history-container');
+        if (!oppName || oppName === "???") { container.innerHTML = `<p style="color:#666; font-size:0.85rem; text-align: center; margin-top: 5px;">Select an opponent to view past matches.</p>`; return; }
+        
+        let combined = [...allTeamHistory]; let uniqueMatches = {};
+        combined.forEach(m => { uniqueMatches[`${m.carnivalName}::${m.gameNumber}`] = m; });
+        carnivalHistory.forEach(m => { uniqueMatches[`${m.carnivalName}::${m.gameNumber}`] = m; });
+        
+        let past = Object.values(uniqueMatches).filter(m => m.opponent === oppName && m.ourTeam === savedOurTeamName);
+        if (past.length === 0) { container.innerHTML = `<p style="color:#666; font-size:0.85rem; text-align: center; margin-top: 5px;">No previous matches found against ${oppName}.</p>`; return; }
+        past.reverse(); 
+        
+        let html = "";
+        past.forEach(m => {
+            let teamGoals = m.teamScore || 0, oppGoals = m.opponentScore || 0;
+            let res = teamGoals > oppGoals ? `<span style='color:var(--success);font-weight:bold;'>WIN (${teamGoals} - ${oppGoals})</span>` : (teamGoals < oppGoals ? `<span style='color:var(--danger);font-weight:bold;'>LOSS (${teamGoals} - ${oppGoals})</span>` : `<span style='color:var(--warning);font-weight:bold;'>DRAW (${teamGoals} - ${oppGoals})</span>`);
+            let teamMisses = 0, oppMisses = 0;
+            if (m.quartersBreakdown) { m.quartersBreakdown.forEach(q => { teamMisses += (q.gsMisses || 0) + (q.gaMisses || 0); oppMisses += (q.oppMisses || 0); }); }
+            let teamShots = teamGoals + teamMisses, oppShots = oppGoals + oppMisses;
+            let teamAcc = teamShots > 0 ? Math.round((teamGoals / teamShots) * 100) : 0, oppAcc = oppShots > 0 ? Math.round((oppGoals / oppShots) * 100) : 0;
+
+            const matchStats = getMatchPlayerStats(m.quartersBreakdown || []);
+            let playerHtml = Object.keys(matchStats).map(p => { let s = matchStats[p], pct = s.shots > 0 ? Math.round((s.goals/s.shots)*100) : 0; return `<div><span style="display:inline-block; width: 15px;">👤</span> <strong>${p}:</strong> ${s.goals}/${s.shots} (${pct}%)</div>`; }).join('');
+            if (!playerHtml) playerHtml = `<div style="color: #999; font-style: italic;">No player stats recorded.</div>`;
+            
+            html += `
+            <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; margin-bottom: 12px; background: #ffffff;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:6px; border-bottom: 1px solid #f1f5f9; padding-bottom: 6px;"><strong>${m.matchTimestamp || 'Unknown Date'}</strong>${res}</div>
+                <div style="color:var(--primary); margin-bottom:10px; font-size: 0.9rem; font-weight: 500;">🏆 ${m.carnivalName}</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+                    <div style="background: #f8fafc; padding: 8px; border-radius: 4px; border: 1px dashed #cbd5e1;"><div style="font-size: 0.8rem; font-weight: bold; color: var(--primary); margin-bottom: 4px;">🛡️ Team</div><div style="font-size: 0.85rem; color: #475569;">Goals: <strong>${teamGoals}</strong><br>Misses: ${teamMisses}<br>Accuracy: <strong>${teamAcc}%</strong></div></div>
+                    <div style="background: #f8fafc; padding: 8px; border-radius: 4px; border: 1px dashed #cbd5e1;"><div style="font-size: 0.8rem; font-weight: bold; color: var(--danger); margin-bottom: 4px;">⚔️ ${oppName}</div><div style="font-size: 0.85rem; color: #475569;">Goals: <strong>${oppGoals}</strong><br>Misses: ${oppMisses}<br>Accuracy: <strong>${oppAcc}%</strong></div></div>
+                </div>
+                <div style="font-size: 0.85rem; color: #334155;"><div style="font-weight: bold; margin-bottom: 4px; border-bottom: 1px solid #f1f5f9; padding-bottom: 2px;">Individual Performance</div>${playerHtml}</div>
+            </div>`;
+        });
+        container.innerHTML = html;
+    }
+
+    function refreshDynamicHeaders() {
+        const cName = carnivalName || "Netball Carnival", tName = savedOurTeamName || "Our Team";
+        document.getElementById('carnival-title-display').innerText = `${tName} @ ${cName}`;
+        document.getElementById('active-carnival-stats-header').innerText = `Carnival Stats: ${tName} @ ${cName}`;
+        document.getElementById('history-log-summary').innerHTML = `📂 History: ${tName} @ ${cName}`;
+        document.getElementById('prev-carnivals-summary').innerHTML = `📂 Previous Carnivals: ${tName}`;
+    }
+
+    function getActiveHistory() { return carnivalHistory.filter(m => { return (m.carnivalName || "Netball Carnival Tracker") === carnivalName && (m.ourTeam || "Our Team") === savedOurTeamName; }); }
+    function getCurrentRosterKey() { return `${carnivalName}::${savedOurTeamName}`; }
+    function loadCurrentRoster() { players = rosters[getCurrentRosterKey()] || []; renderRosterTags(); populateDropdowns(); }
+    function getCleanTimestamp() { const now = new Date(), days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']; let hours = now.getHours(), minutes = now.getMinutes(), ampm = hours >= 12 ? 'pm' : 'am'; hours = hours % 12; hours = hours ? hours : 12; minutes = minutes < 10 ? '0' + minutes : minutes; return `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()} at ${hours}:${minutes}${ampm}`; }
+    function isGameActive() { const activeLiveShots = currentGame.liveGs.goals + currentGame.liveGs.misses + currentGame.liveGa.goals + currentGame.liveGa.misses + currentGame.liveOpponent.goals + currentGame.liveOpponent.misses; return (currentGame.matchTimestamp !== null || activeLiveShots > 0 || currentGame.quartersData.length > 0); }
+    function setupDropdownInitialState(selectId, inputId, currentValue, defaultValue) { const sel = document.getElementById(selectId), inp = document.getElementById(inputId); if(currentValue && currentValue !== defaultValue) { let exists = Array.from(sel.options).some(opt => opt.value === currentValue); if (!exists) sel.innerHTML += `<option value="${currentValue}">${currentValue}</option>`; sel.value = currentValue; inp.style.display = 'none'; } else { sel.value = "_default_"; inp.style.display = 'none'; inp.value = ""; } }
+    function handleCarnivalSelection() { const inp = document.getElementById('carnival-name-input'); inp.style.display = document.getElementById('carnival-select').value === '_new_' ? 'block' : 'none'; }
+    function handleTeamSelection() { const inp = document.getElementById('our-team-name'); inp.style.display = document.getElementById('team-select').value === '_new_' ? 'block' : 'none'; }
 
     function buildPreviousCarnivalSummaries(rows) {
         const container = document.getElementById('previous-carnivals-container'); let carnStats = {};
@@ -1148,12 +1061,8 @@
         let html = "";
         sortedCarnivals.forEach(cName => {
             let data = carnStats[cName], shots = data.goals + data.misses, acc = shots > 0 ? Math.round((data.goals/shots)*100) : 0;
-            let playerHtml = Object.keys(data.players).map(p => {
-                let pStats = data.players[p], pShots = pStats.goals + pStats.misses, pAcc = pShots > 0 ? Math.round((pStats.goals/pShots)*100) : 0;
-                return `<div><strong>👤 ${p}:</strong> ${pStats.goals}/${pShots} (${pAcc}%)</div>`;
-            }).join('');
+            let playerHtml = Object.keys(data.players).map(p => { let pStats = data.players[p], pShots = pStats.goals + pStats.misses, pAcc = pShots > 0 ? Math.round((pStats.goals/pShots)*100) : 0; return `<div><strong>👤 ${p}:</strong> ${pStats.goals}/${pShots} (${pAcc}%)</div>`; }).join('');
             if(playerHtml === "") playerHtml = `<div style="color:#999; font-size:0.8rem; font-style:italic;">No individual player stats recorded.</div>`;
-
             html += `<div class="prev-carnival-summary-box"><div class="prev-carnival-title">🏆 ${cName}</div><div style="display:flex; justify-content:space-between; font-size:0.9rem; margin-bottom: 8px;"><span>Team Goals: <strong>${data.goals}</strong></span><span>Misses: <strong>${data.misses}</strong></span><span>Accuracy: <strong>${acc}%</strong></span></div><div style="font-size:0.85rem; color:#475569; margin-bottom: 12px;">${playerHtml}</div><button class="btn-row-share" style="width: 100%;" onclick="sharePreviousCarnival('${cName.replace(/'/g, "\\'")}')">📢 Share Stats</button></div>`;
         });
         container.innerHTML = html;
@@ -1167,125 +1076,14 @@
             if(rowCarnival === cName && rowTeam === savedOurTeamName) {
                 if(String(row[0]) === "Roster_Update" || String(row[0]) === "Roster_Delete" || String(row[3]) === "Roster") return;
                 data.goals += goals; data.misses += misses;
-                if (player && player !== "No Data") {
-                    if(!data.players[player]) data.players[player] = {goals: 0, misses: 0};
-                    data.players[player].goals += goals; data.players[player].misses += misses;
-                }
+                if (player && player !== "No Data") { if(!data.players[player]) data.players[player] = {goals: 0, misses: 0}; data.players[player].goals += goals; data.players[player].misses += misses; }
             }
         });
         let shots = data.goals + data.misses, acc = shots > 0 ? Math.round((data.goals/shots)*100) : 0;
         let shareMessage = `🏆 CARNIVAL REPORT 🏆\n📍 ${cName}\n🛡️ Team: ${savedOurTeamName}\n\n📊 TEAM STATS\nGoals: ${data.goals}\nMisses: ${data.misses}\nAccuracy: ${acc}%\n\n🎯 SHOOTER SUMMARY\n`;
-        Object.keys(data.players).forEach(p => {
-            let pStats = data.players[p], pShots = pStats.goals + pStats.misses, pAcc = pShots > 0 ? Math.round((pStats.goals/pShots)*100) : 0;
-            if(pShots > 0) shareMessage += `👤 ${p}: ${pStats.goals}/${pShots} (${pAcc}%)\n`;
-        });
+        Object.keys(data.players).forEach(p => { let pStats = data.players[p], pShots = pStats.goals + pStats.misses, pAcc = pShots > 0 ? Math.round((pStats.goals/pShots)*100) : 0; if(pShots > 0) shareMessage += `👤 ${p}: ${pStats.goals}/${pShots} (${pAcc}%)\n`; });
         shareResult(shareMessage);
     };
-
-    async function getNextGameNumber() {
-        const localActive = getActiveHistory();
-        let nextNum = localActive.length + 1;
-        document.getElementById('game-number-input').value = "Game " + nextNum; 
-        currentGame.gameNumber = "Game " + nextNum;
-
-        let userToken = localStorage.getItem('netball_security_token');
-        if (!userToken) return;
-
-        try {
-            document.getElementById('game-number-input').value = "Auto-syncing...";
-            const response = await fetch(`${GOOGLE_SHEETS_URL}?token=${encodeURIComponent(userToken)}&fetchType=summary`);
-            const resultText = await response.text();
-            if (resultText === "Unauthorized") {
-                document.getElementById('game-number-input').value = currentGame.gameNumber;
-                return;
-            }
-
-            const rawRows = JSON.parse(resultText); 
-            if (!Array.isArray(rawRows)) return;
-
-            const rows = getLatestRows(rawRows);
-            let matchesMap = {};
-            
-            rows.forEach(row => {
-                const rowCarnival = String(row[13] || "Netball Carnival Tracker").trim();
-                const teamName = String(row[1] || "Our Team").trim();
-                const player = row[6];
-                const matchId = String(row[0]);
-                
-                if (rowCarnival && teamName && player && player !== "No Data" && player !== "Summary") {
-                    const rKey = `${rowCarnival}::${teamName}`;
-                    if (!rosters[rKey]) rosters[rKey] = [];
-                    
-                    if (matchId === "Roster_Delete") {
-                        rosters[rKey] = rosters[rKey].filter(p => p !== player);
-                    } else {
-                        if (!rosters[rKey].includes(player)) rosters[rKey].push(player);
-                    }
-                }
-
-                if (rowCarnival !== carnivalName || teamName !== savedOurTeamName) return;
-                if (!matchId || matchId === "Roster_Update" || matchId === "Roster_Delete" || String(row[3]) === "Roster") return;
-
-                const opponentName = String(row[2] || "Opponent").trim(), qNum = parseInt(row[3]);
-                const pos = row[7], goals = parseInt(row[8]) || 0, misses = parseInt(row[9]) || 0, oppGoals = parseInt(row[5]) || 0, rowTimestamp = row[12] || null;
-                const uniqueKey = `${rowCarnival}::${teamName}::${matchId}`;
-                
-                if (!matchesMap[uniqueKey]) matchesMap[uniqueKey] = { carnivalName: rowCarnival, gameNumber: matchId, ourTeam: teamName, opponent: opponentName, matchTimestamp: rowTimestamp, quarters: {} };
-                
-                if (!matchesMap[uniqueKey].quarters[qNum]) {
-                    matchesMap[uniqueKey].quarters[qNum] = { quarterNumber: qNum, gsName: "", gaName: "", gsGoals: 0, gsMisses: 0, gaGoals: 0, gaMisses: 0, oppGoals: oppGoals, oppMisses: 0, shotHistory: [], oppShotHistory: [], playByPlay: [], pbpLoadedFromCloud: false };
-                }
-                
-                let qObj = matchesMap[uniqueKey].quarters[qNum];
-                if (pos === "GS") { qObj.gsName = player; qObj.gsGoals += goals; qObj.gsMisses += misses; } 
-                else if (pos === "GA") { qObj.gaName = player; qObj.gaGoals += goals; qObj.gaMisses += misses; }
-                
-                qObj.playByPlay = [];
-                qObj.shotHistory = [];
-                qObj.oppShotHistory = [];
-            });
-
-            let newGamesAdded = false;
-
-            Object.keys(matchesMap).forEach(key => {
-                const mData = matchesMap[key];
-                const existsLocally = carnivalHistory.some(m => m.carnivalName === mData.carnivalName && m.ourTeam === mData.ourTeam && m.gameNumber === mData.gameNumber);
-                
-                if (!existsLocally) {
-                    let quartersArr = Object.values(mData.quarters).sort((a, b) => a.quarterNumber - b.quarterNumber);
-                    let teamScore = 0, opponentScore = 0;
-                    quartersArr.forEach(q => { teamScore += (q.gsGoals + q.gaGoals); opponentScore += q.oppGoals; });
-                    
-                    carnivalHistory.push({ 
-                        carnivalName: mData.carnivalName, gameNumber: mData.gameNumber, ourTeam: mData.ourTeam, 
-                        opponent: mData.opponent, teamScore: teamScore, opponentScore: opponentScore, 
-                        quartersBreakdown: quartersArr, matchTimestamp: mData.matchTimestamp 
-                    });
-                    newGamesAdded = true;
-                }
-            });
-
-            localStorage.setItem('netball_rosters', JSON.stringify(rosters));
-            loadCurrentRoster();
-
-            if (newGamesAdded) {
-                sortCarnivalHistory(); 
-                localStorage.setItem('netball_history', JSON.stringify(carnivalHistory));
-                renderHistory(); 
-                calculateCarnivalTotals(); 
-                updateSetupStatsDisplay();
-                updateLiveUI();
-            }
-
-            const updatedActive = getActiveHistory();
-            currentGame.gameNumber = "Game " + (updatedActive.length + 1);
-            document.getElementById('game-number-input').value = currentGame.gameNumber;
-
-        } catch (err) {
-            console.error("Silent auto-sync failed", err);
-            document.getElementById('game-number-input').value = currentGame.gameNumber;
-        }
-    }
 
     function populateDropdowns() {
         const gsSel = document.getElementById('select-gs'), gaSel = document.getElementById('select-ga');
@@ -1316,10 +1114,7 @@
 
     function assignShooters(triggeredFrom) {
         const gsVal = document.getElementById('select-gs').value, gaVal = document.getElementById('select-ga').value;
-        if (gsVal && gaVal && gsVal === gaVal) {
-            alert("You cannot select the same player for both positions!");
-            if (triggeredFrom === 'gs') document.getElementById('select-gs').value = ""; else document.getElementById('select-ga').value = ""; return;
-        }
+        if (gsVal && gaVal && gsVal === gaVal) { alert("You cannot select the same player for both positions!"); if (triggeredFrom === 'gs') document.getElementById('select-gs').value = ""; else document.getElementById('select-ga').value = ""; return; }
         currentGame.gsPlayer = gsVal || "Unassigned"; currentGame.gaPlayer = gaVal || "Unassigned";
         document.getElementById('name-gs').innerText = currentGame.gsPlayer; document.getElementById('name-ga').innerText = currentGame.gaPlayer;
         updateLiveUI(); updateSetupStatsDisplay();
@@ -1339,13 +1134,7 @@
         });
     }
 
-    function ensureTimestamp() {
-        if (!currentGame.matchTimestamp) {
-            currentGame.matchTimestamp = getCleanTimestamp();
-            currentGame.log.unshift(`[SYSTEM] First action detected. Timestamp set: ${currentGame.matchTimestamp}`);
-            requestWakeLock();
-        }
-    }
+    function ensureTimestamp() { if (!currentGame.matchTimestamp) { currentGame.matchTimestamp = getCleanTimestamp(); currentGame.log.unshift(`[SYSTEM] First action detected. Timestamp set: ${currentGame.matchTimestamp}`); requestWakeLock(); } }
 
     function recalculateMatchScores() {
         let us = 0, them = 0;
@@ -1358,10 +1147,7 @@
         currentGame.runningGameTotals = {}; currentGame.runningOppTotals = { goals: 0, shots: 0 };
         currentGame.quartersData.forEach(q => {
             if (q.shotHistory && q.shotHistory.length > 0) {
-                q.shotHistory.forEach(shot => {
-                    if (!currentGame.runningGameTotals[shot.name]) currentGame.runningGameTotals[shot.name] = { goals: 0, shots: 0 };
-                    currentGame.runningGameTotals[shot.name].shots++; if (shot.isGoal) currentGame.runningGameTotals[shot.name].goals++;
-                });
+                q.shotHistory.forEach(shot => { if (!currentGame.runningGameTotals[shot.name]) currentGame.runningGameTotals[shot.name] = { goals: 0, shots: 0 }; currentGame.runningGameTotals[shot.name].shots++; if (shot.isGoal) currentGame.runningGameTotals[shot.name].goals++; });
             } else {
                 if(q.gsName) { if(!currentGame.runningGameTotals[q.gsName]) currentGame.runningGameTotals[q.gsName] = { goals: 0, shots: 0 }; currentGame.runningGameTotals[q.gsName].goals += q.gsGoals; currentGame.runningGameTotals[q.gsName].shots += (q.gsGoals + q.gsMisses); }
                 if(q.gaName) { if(!currentGame.runningGameTotals[q.gaName]) currentGame.runningGameTotals[q.gaName] = { goals: 0, shots: 0 }; currentGame.runningGameTotals[q.gaName].goals += q.gaGoals; currentGame.runningGameTotals[q.gaName].shots += (q.gaGoals + q.gaMisses); }
@@ -1374,9 +1160,7 @@
         const activeLiveShots = currentGame.liveGs.goals + currentGame.liveGs.misses + currentGame.liveGa.goals + currentGame.liveGa.misses + currentGame.liveOpponent.goals + currentGame.liveOpponent.misses;
         if (activeLiveShots === 0) { alert("No stats recorded yet in this quarter to reset."); return; }
         if(confirm(`Completely discard all live stats currently tracked for Quarter ${currentGame.currentQuarter}? This cannot be undone.`)) {
-            currentGame.isDirty = true;
-            currentGame.liveGs = { goals: 0, misses: 0 }; currentGame.liveGa = { goals: 0, misses: 0 }; currentGame.liveOpponent = { goals: 0, misses: 0 };
-            currentGame.shotHistory = []; currentGame.oppShotHistory = []; currentGame.playByPlay = [];
+            currentGame.isDirty = true; currentGame.liveGs = { goals: 0, misses: 0 }; currentGame.liveGa = { goals: 0, misses: 0 }; currentGame.liveOpponent = { goals: 0, misses: 0 }; currentGame.shotHistory = []; currentGame.oppShotHistory = []; currentGame.playByPlay = [];
             currentGame.log = [`[RESET] Quarter ${currentGame.currentQuarter} stats cleared.`];
             rebuildRunningTotals(); recalculateMatchScores(); updateLiveUI(); updateSetupStatsDisplay();
         }
@@ -1384,11 +1168,7 @@
 
     function resetCurrentGame() {
         if (!isGameActive() && currentGame.quartersData.length === 0) { alert("There is no active game data to discard."); return; }
-        if(confirm("🚨 WARNING: Are you sure you want to completely discard this entire game? ALL unsaved quarters and live stats will be lost.")) {
-            releaseWakeLock();
-            localStorage.removeItem('netball_current_draft');
-            resetLiveGame();
-        }
+        if(confirm("🚨 WARNING: Are you sure you want to completely discard this entire game? ALL unsaved quarters and live stats will be lost.")) { releaseWakeLock(); localStorage.removeItem('netball_current_draft'); resetLiveGame(); }
     }
 
     function editQuarter(targetQNum) {
@@ -1396,29 +1176,18 @@
         
         if (activeLiveShots > 0 && currentGame.currentQuarter !== targetQNum) { 
             if (currentGame.isDirty) {
-                if (confirm(`You have unsaved changes in Quarter ${currentGame.currentQuarter}. Click OK to SAVE them, or Cancel to DISCARD changes and revert.`)) {
-                    forceSaveCurrentQuarter();
-                } else {
-                    if (currentGame.originalQuarterBackup) {
-                        currentGame.quartersData.push(currentGame.originalQuarterBackup);
-                        currentGame.quartersData.sort((a, b) => a.quarterNumber - b.quarterNumber);
-                    }
-                }
-            } else {
-                forceSaveCurrentQuarter();
-            }
+                if (confirm(`You have unsaved changes in Quarter ${currentGame.currentQuarter}. Click OK to SAVE them, or Cancel to DISCARD changes and revert.`)) { forceSaveCurrentQuarter(); } 
+                else { if (currentGame.originalQuarterBackup) { currentGame.quartersData.push(currentGame.originalQuarterBackup); currentGame.quartersData.sort((a, b) => a.quarterNumber - b.quarterNumber); } }
+            } else { forceSaveCurrentQuarter(); }
         }
         
         const qIndex = currentGame.quartersData.findIndex(q => q.quarterNumber === targetQNum);
         if (qIndex === -1) { alert("Quarter data not found."); return; }
         const qData = currentGame.quartersData.splice(qIndex, 1)[0];
         
-        currentGame.originalQuarterBackup = JSON.parse(JSON.stringify(qData));
-        currentGame.isDirty = false;
-        currentGame.isEditMode = true; 
+        currentGame.originalQuarterBackup = JSON.parse(JSON.stringify(qData)); currentGame.isDirty = false; currentGame.isEditMode = true; 
         
-        currentGame.currentQuarter = targetQNum;
-        currentGame.liveGs = { goals: qData.gsGoals, misses: qData.gsMisses }; currentGame.liveGa = { goals: qData.gaGoals, misses: qData.gaMisses }; currentGame.liveOpponent = { goals: qData.oppGoals || 0, misses: qData.oppMisses || 0 };
+        currentGame.currentQuarter = targetQNum; currentGame.liveGs = { goals: qData.gsGoals, misses: qData.gsMisses }; currentGame.liveGa = { goals: qData.gaGoals, misses: qData.gaMisses }; currentGame.liveOpponent = { goals: qData.oppGoals || 0, misses: qData.oppMisses || 0 };
         currentGame.shotHistory = qData.shotHistory ? [...qData.shotHistory] : []; currentGame.oppShotHistory = qData.oppShotHistory ? [...qData.oppShotHistory] : []; currentGame.playByPlay = qData.playByPlay ? [...qData.playByPlay] : [];
 
         if (qData.log && qData.log.length > 0) currentGame.log = [...qData.log];
@@ -1440,21 +1209,13 @@
         assignShooters(); window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    function triggerFlash(element, isGoal) {
-        if (!element) return;
-        const animClass = isGoal ? 'flash-green-anim' : 'flash-red-anim';
-        element.classList.remove(animClass);
-        void element.offsetWidth; 
-        element.classList.add(animClass);
-    }
+    function triggerFlash(element, isGoal) { if (!element) return; const animClass = isGoal ? 'flash-green-anim' : 'flash-red-anim'; element.classList.remove(animClass); void element.offsetWidth; element.classList.add(animClass); }
 
     function recordOppShot(isGoal, btnElement) {
         if (!currentGame.opponent || currentGame.opponent.trim() === "???") { alert("Please specify an opponent name before recording stats."); return; }
         if (!currentGame.gsPlayer || currentGame.gsPlayer === "Unassigned" || !currentGame.gaPlayer || currentGame.gaPlayer === "Unassigned") { alert("Please assign players to both positions first!"); return; }
         
-        triggerFlash(btnElement, isGoal);
-        ensureTimestamp();
-        currentGame.isDirty = true;
+        triggerFlash(btnElement, isGoal); ensureTimestamp(); currentGame.isDirty = true;
         if (isGoal) currentGame.liveOpponent.goals++; else currentGame.liveOpponent.misses++;
         recalculateMatchScores(); currentGame.oppShotHistory.push(isGoal); currentGame.playByPlay.push({ team: 'Opp', actor: currentGame.opponent || "Opponent", isGoal: isGoal });
         const outcome = isGoal ? "scored a Goal" : "missed", oppNameDisplay = currentGame.opponent ? currentGame.opponent.trim().toUpperCase() : "OPPONENT";
@@ -1466,9 +1227,7 @@
         if (!currentGame.opponent || currentGame.opponent.trim() === "???") { alert("Please specify an opponent name before recording stats."); return; }
         if ((role === 'gs' && (!currentGame.gsPlayer || currentGame.gsPlayer === "Unassigned")) || (role === 'ga' && (!currentGame.gaPlayer || currentGame.gaPlayer === "Unassigned"))) { alert("Please assign a player to this position first!"); return; }
         
-        triggerFlash(btnElement, isGoal);
-        ensureTimestamp();
-        currentGame.isDirty = true;
+        triggerFlash(btnElement, isGoal); ensureTimestamp(); currentGame.isDirty = true;
         const targetDataObj = role === 'gs' ? currentGame.liveGs : currentGame.liveGa, playerName = role === 'gs' ? currentGame.gsPlayer : currentGame.gaPlayer;
         if (isGoal) targetDataObj.goals++; else targetDataObj.misses++;
         recalculateMatchScores(); const outcome = isGoal ? "scored a Goal" : "missed";
@@ -1478,33 +1237,18 @@
     }
 
     function undoLastAction() {
-        if (!currentGame.playByPlay || currentGame.playByPlay.length === 0) {
-            alert("No actions to undo.");
-            return;
-        }
-        currentGame.isDirty = true;
-        const lastAction = currentGame.playByPlay.pop();
+        if (!currentGame.playByPlay || currentGame.playByPlay.length === 0) { alert("No actions to undo."); return; }
+        currentGame.isDirty = true; const lastAction = currentGame.playByPlay.pop();
 
         if (lastAction.team === 'Us') {
-            const role = lastAction.role;
-            const targetDataObj = role === 'gs' ? currentGame.liveGs : currentGame.liveGa;
-            
-            if (lastAction.isGoal) targetDataObj.goals--; 
-            else targetDataObj.misses--;
-            
-            currentGame.shotHistory.pop();
-            currentGame.log.unshift(`[UNDO] Removed last ${role.toUpperCase()} shot.`);
+            const role = lastAction.role; const targetDataObj = role === 'gs' ? currentGame.liveGs : currentGame.liveGa;
+            if (lastAction.isGoal) targetDataObj.goals--; else targetDataObj.misses--;
+            currentGame.shotHistory.pop(); currentGame.log.unshift(`[UNDO] Removed last ${role.toUpperCase()} shot.`);
         } else if (lastAction.team === 'Opp') {
-            if (lastAction.isGoal) currentGame.liveOpponent.goals--; 
-            else currentGame.liveOpponent.misses--;
-            
-            currentGame.oppShotHistory.pop();
-            currentGame.log.unshift(`[UNDO] Removed last OPPONENT shot.`);
+            if (lastAction.isGoal) currentGame.liveOpponent.goals--; else currentGame.liveOpponent.misses--;
+            currentGame.oppShotHistory.pop(); currentGame.log.unshift(`[UNDO] Removed last OPPONENT shot.`);
         }
-
-        recalculateMatchScores();
-        updateLiveUI();
-        updateSetupStatsDisplay();
+        recalculateMatchScores(); updateLiveUI(); updateSetupStatsDisplay();
     }
 
     function renderCurrentGameShooterTotals() {
@@ -1793,46 +1537,6 @@
         return header + totalsText + qText + pbpText;
     }
 
-    async function autoPushToGoogleSheets(matchDataPayload) {
-        let userToken = localStorage.getItem('netball_security_token');
-        if (!userToken) { alert("⚠️ Game saved locally, but data was not sent to Google Sheets because security token is missing."); return; }
-        
-        let exportData = []; 
-        const matchName = matchDataPayload.gameNumber || `Game ${getActiveHistory().length}`;
-        const team = matchDataPayload.ourTeam ? matchDataPayload.ourTeam.trim() : "Our Team";
-        const opp = matchDataPayload.opponent ? matchDataPayload.opponent.trim() : "Opponent";
-        const finalTimestamp = matchDataPayload.matchTimestamp || "";
-        const pushTimestamp = Date.now(); 
-
-        if (matchDataPayload.quartersBreakdown) {
-            matchDataPayload.quartersBreakdown.forEach(q => {
-                const qNum = q.quarterNumber;
-                let hasUsData = false;
-                const pbpString = JSON.stringify(q.playByPlay || []);
-                
-                const exportStats = getQuarterPlayerStatsForExport(q);
-                
-                exportStats.forEach(s => {
-                    hasUsData = true; 
-                    let misses = s.shots - s.goals;
-                    let pct = s.shots > 0 ? Math.round((s.goals / s.shots) * 100) : 0;
-                    exportData.push([matchName, team, opp, qNum, s.goals, q.oppGoals || 0, s.name, s.role, s.goals, misses, s.shots, `${pct}%`, finalTimestamp, carnivalName, pushTimestamp, pbpString]);
-                });
-                
-                if (!hasUsData && (q.oppGoals || 0) > 0) exportData.push([matchName, team, opp, qNum, 0, q.oppGoals || 0, "No Data", "-", 0, 0, 0, "0%", finalTimestamp, carnivalName, pushTimestamp, pbpString]);
-            });
-        }
-        
-        if (exportData.length === 0) return;
-        try {
-            const payload = { token: userToken, matchData: exportData };
-            const response = await fetch(GOOGLE_SHEETS_URL, { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'text/plain;charset=utf-8' } });
-            const resultText = await response.text();
-            if (resultText === "Unauthorized") { alert("❌ Invalid Security Token."); localStorage.removeItem('netball_security_token'); } 
-            else console.log("✅ Game backup appended successfully.");
-        } catch (e) { alert("❌ Cloud Link Interrupted. Data saved locally, but failed to back up to Sheets."); }
-    }
-
     function hardResetApp() {
         if (confirm("🚨 DANGER ZONE: This will wipe ALL data on this device. Are you sure you want a completely clean slate?")) {
             if (confirm("Final confirmation: Wipe all cached data?")) { localStorage.clear(); window.location.reload(); }
@@ -1846,12 +1550,7 @@
         if (!pendingShareContext) return;
         
         const shareType = document.querySelector('input[name="shareType"]:checked').value;
-        const options = {
-            includeTotals: shareType !== 'parent',
-            includeQuarterScores: true,
-            includeQuarterStats: shareType !== 'parent',
-            includePBP: shareType === 'coach-pbp'
-        };
+        const options = { includeTotals: shareType !== 'parent', includeQuarterScores: true, includeQuarterStats: shareType !== 'parent', includePBP: shareType === 'coach-pbp' };
 
         const m = pendingShareContext.matchData, teamLabel = m.ourTeam || "Our Team", wasNewSave = pendingShareContext.isNewSave;
         const shareText = generateCleanExportText(teamLabel, m.opponent, m.teamScore || m.matchTotalScore, m.opponentScore || m.opponentTotalScore || 0, m.quartersBreakdown || m.quartersData, options);
@@ -1875,7 +1574,8 @@
             const matchData = { 
                 carnivalName: carnivalName, gameNumber: currentGame.gameNumber || `Game ${getActiveHistory().length + 1}`, 
                 ourTeam: currentGame.ourTeam, opponent: currentGame.opponent, teamScore: currentGame.matchTotalScore, 
-                opponentScore: currentGame.opponentTotalScore, quartersBreakdown: currentGame.quartersData, matchTimestamp: currentGame.matchTimestamp 
+                opponentScore: currentGame.opponentTotalScore, quartersBreakdown: currentGame.quartersData, matchTimestamp: currentGame.matchTimestamp,
+                isSynced: false // Defaults to false, true if push succeeds below
             };
             
             carnivalHistory.push(matchData); 
@@ -1885,17 +1585,22 @@
             renderHistory(); calculateCarnivalTotals(); 
             
             if (!currentGame.loadedPastGame) {
-                await autoPushToGoogleSheets(matchData);
+                const pushSuccess = await autoPushToGoogleSheets(matchData);
+                matchData.isSynced = pushSuccess;
+                localStorage.setItem('netball_history', JSON.stringify(carnivalHistory)); // Re-save with updated flag
+                renderHistory(); // Re-render to clear badge if successful
+            } else {
+                // If it's an edited game, we treat it as unsynced until they manually push it later (or logic dictates)
+                matchData.isSynced = false;
+                localStorage.setItem('netball_history', JSON.stringify(carnivalHistory));
+                renderHistory();
             }
             
             saveBtn.innerText = origText; saveBtn.disabled = false;
             localStorage.removeItem('netball_current_draft');
             
-            if (!currentGame.loadedPastGame) {
-                openShareModal(matchData, true);
-            } else {
-                setTimeout(() => { resetLiveGame(); }, 100);
-            }
+            if (!currentGame.loadedPastGame) { openShareModal(matchData, true); } 
+            else { setTimeout(() => { resetLiveGame(); }, 100); }
             
             releaseWakeLock();
         }
@@ -1907,15 +1612,11 @@
             const btnContainer = document.getElementById('q-select-buttons');
             btnContainer.innerHTML = availableQs.map(q => `<button class="btn" style="width:100%; margin-bottom:8px; padding: 12px; font-size: 1.05rem;" onclick="resolveQuarterSelect(${q})">Edit Quarter ${q}</button>`).join('');
             btnContainer.innerHTML += `<button class="btn btn-cancel" style="width:100%; margin-top: 10px; background-color: var(--neutral-dark);" onclick="resolveQuarterSelect(null)">Cancel</button>`;
-            modal.style.display = 'flex';
-            window.currentQSelectResolve = resolve;
+            modal.style.display = 'flex'; window.currentQSelectResolve = resolve;
         });
     }
 
-    function resolveQuarterSelect(val) {
-        document.getElementById('q-select-modal').style.display = 'none';
-        if (window.currentQSelectResolve) window.currentQSelectResolve(val);
-    }
+    function resolveQuarterSelect(val) { document.getElementById('q-select-modal').style.display = 'none'; if (window.currentQSelectResolve) window.currentQSelectResolve(val); }
 
     async function editSavedGame(globalIndex) {
         const activeLiveShots = currentGame.liveGs.goals + currentGame.liveGs.misses + currentGame.liveGa.goals + currentGame.liveGa.misses + currentGame.liveOpponent.goals + currentGame.liveOpponent.misses;
@@ -1926,7 +1627,6 @@
         if (matchToEdit.quartersBreakdown && matchToEdit.quartersBreakdown.length > 0) {
             const availableQs = matchToEdit.quartersBreakdown.map(q => q.quarterNumber);
             targetQ = await promptQuarterSelect(availableQs);
-            
             if (targetQ === null) return; 
         }
 
@@ -1939,9 +1639,10 @@
                 const resultText = await response.text();
                 
                 if (resultText !== "Unauthorized") {
-                    const rows = JSON.parse(resultText);
-                    if (Array.isArray(rows)) {
-                        const latestRows = getLatestRows(rows).filter(r => r[0] === matchToEdit.gameNumber && r[13] === matchToEdit.carnivalName && r[1] === matchToEdit.ourTeam);
+                    let rawRows;
+                    try { rawRows = JSON.parse(resultText); } catch(e) {}
+                    if (Array.isArray(rawRows)) {
+                        const latestRows = getLatestRows(rawRows).filter(r => String(r[0]) === matchToEdit.gameNumber && String(r[13]).trim() === matchToEdit.carnivalName && String(r[1]).trim() === matchToEdit.ourTeam);
                         latestRows.forEach(row => {
                             const qNum = parseInt(row[3]);
                             let qData = matchToEdit.quartersBreakdown.find(q => q.quarterNumber === qNum);
@@ -1950,29 +1651,24 @@
                                     let parsedPBP = JSON.parse(row[15]);
                                     if (Array.isArray(parsedPBP) && parsedPBP.length > 0) {
                                         qData.playByPlay = parsedPBP;
-                                        qData.shotHistory = [];
-                                        qData.oppShotHistory = [];
+                                        qData.shotHistory = []; qData.oppShotHistory = [];
                                         parsedPBP.forEach(p => {
                                             if (p.team === 'Us') { qData.shotHistory.push({ role: p.role, isGoal: p.isGoal, name: p.actor }); }
                                             else if (p.team === 'Opp') { qData.oppShotHistory.push(p.isGoal); }
                                         });
                                     }
-                                } catch(e) { console.error("Error parsing PBP JSON during edit fetch", e); }
+                                } catch(e) {}
                             }
                         });
                     }
                 }
-            } catch(e) {
-                console.log("Could not download detailed PBP for edit fallback to summaries.", e);
-            }
+            } catch(e) {}
             document.body.style.cursor = 'default';
         }
         
         let targetQData = matchToEdit.quartersBreakdown.find(q => q.quarterNumber === targetQ);
         if (targetQData && (!targetQData.playByPlay || targetQData.playByPlay.length === 0)) {
-             targetQData.shotHistory = [];
-             targetQData.oppShotHistory = [];
-             targetQData.playByPlay = [];
+             targetQData.shotHistory = []; targetQData.oppShotHistory = []; targetQData.playByPlay = [];
              for (let g = 0; g < targetQData.gsGoals; g++) { targetQData.shotHistory.push({ role: 'gs', isGoal: true, name: targetQData.gsName }); targetQData.playByPlay.push({ team: 'Us', actor: targetQData.gsName, role: 'gs', isGoal: true }); }
              for (let m = 0; m < targetQData.gsMisses; m++) { targetQData.shotHistory.push({ role: 'gs', isGoal: false, name: targetQData.gsName }); targetQData.playByPlay.push({ team: 'Us', actor: targetQData.gsName, role: 'gs', isGoal: false }); }
              for (let g = 0; g < targetQData.gaGoals; g++) { targetQData.shotHistory.push({ role: 'ga', isGoal: true, name: targetQData.gaName }); targetQData.playByPlay.push({ team: 'Us', actor: targetQData.gaName, role: 'ga', isGoal: true }); }
@@ -1992,9 +1688,7 @@
             const lastQData = currentGame.quartersData.splice(qIndex, 1)[0];
             
             currentGame.originalQuarterBackup = JSON.parse(JSON.stringify(lastQData));
-            currentGame.isDirty = false;
-            currentGame.isEditMode = true; 
-            currentGame.loadedPastGame = true; 
+            currentGame.isDirty = false; currentGame.isEditMode = true; currentGame.loadedPastGame = true; 
             
             currentGame.currentQuarter = targetQ;
             currentGame.liveGs = { goals: lastQData.gsGoals, misses: lastQData.gsMisses };
@@ -2007,8 +1701,7 @@
             if (lastQData.log && lastQData.log.length > 0) {
                 currentGame.log = [...lastQData.log];
             } else {
-                currentGame.log = [];
-                let tempUs = 0, tempOpp = 0;
+                currentGame.log = []; let tempUs = 0, tempOpp = 0;
                 currentGame.quartersData.forEach(q => { tempUs += (q.gsGoals + q.gaGoals); tempOpp += (q.oppGoals || 0); });
                 if (currentGame.playByPlay.length > 0) {
                     currentGame.playByPlay.forEach(p => {
@@ -2032,31 +1725,19 @@
             currentGame.shotHistory = []; currentGame.oppShotHistory = []; currentGame.playByPlay = []; 
             currentGame.log = [`[EDIT MODE] Loaded game vs ${currentGame.opponent.trim()}.`];
             
-            clearDropdownSelectors();
-            currentGame.gsPlayer = "Unassigned"; currentGame.gaPlayer = "Unassigned";
-            currentGame.isDirty = false;
-            currentGame.originalQuarterBackup = null;
-            currentGame.isEditMode = true;
-            currentGame.loadedPastGame = true;
+            clearDropdownSelectors(); currentGame.gsPlayer = "Unassigned"; currentGame.gaPlayer = "Unassigned";
+            currentGame.isDirty = false; currentGame.originalQuarterBackup = null; currentGame.isEditMode = true; currentGame.loadedPastGame = true;
         }
         
         rebuildRunningTotals(); recalculateMatchScores();
-        document.getElementById('game-number-input').value = currentGame.gameNumber; 
-        document.getElementById('display-our-team').innerText = currentGame.ourTeam; 
+        document.getElementById('game-number-input').value = currentGame.gameNumber; document.getElementById('display-our-team').innerText = currentGame.ourTeam; 
         
         setupDropdownInitialState('opponent-select', 'opponent-name-input', currentGame.opponent, "");
-        document.getElementById('display-opp').innerText = currentGame.opponent; 
-        document.getElementById('opp-card-title').innerHTML = `<strong>${currentGame.opponent.trim()}</strong>`;
+        document.getElementById('display-opp').innerText = currentGame.opponent; document.getElementById('opp-card-title').innerHTML = `<strong>${currentGame.opponent.trim()}</strong>`;
         
-        carnivalHistory.splice(globalIndex, 1); 
-        localStorage.setItem('netball_history', JSON.stringify(carnivalHistory));
+        carnivalHistory.splice(globalIndex, 1); localStorage.setItem('netball_history', JSON.stringify(carnivalHistory));
         
-        assignShooters(); 
-        
-        renderHistory(); 
-        calculateCarnivalTotals(); 
-        updateLiveUI(); 
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        assignShooters(); renderHistory(); calculateCarnivalTotals(); updateLiveUI(); window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function deleteSavedGame(globalIndex) {
@@ -2081,18 +1762,21 @@
             const response = await fetch(url);
             const resultText = await response.text();
             if (resultText !== "Unauthorized") {
-                const rows = JSON.parse(resultText);
-                const latestRows = getLatestRows(rows).filter(r => r[0] === match.gameNumber && r[13] === match.carnivalName && r[1] === match.ourTeam);
-                latestRows.forEach(row => {
-                    const qNum = parseInt(row[3]);
-                    let qData = match.quartersBreakdown.find(q => q.quarterNumber === qNum);
-                    if (qData && row[15] && row[15].length > 5) {
-                        try {
-                            let parsedPBP = JSON.parse(row[15]);
-                            if (Array.isArray(parsedPBP) && parsedPBP.length > 0) qData.playByPlay = parsedPBP;
-                        } catch(e) {}
-                    }
-                });
+                let rawRows;
+                try { rawRows = JSON.parse(resultText); } catch(e) {}
+                if (Array.isArray(rawRows)) {
+                    const latestRows = getLatestRows(rawRows).filter(r => String(r[0]) === match.gameNumber && String(r[13]).trim() === match.carnivalName && String(r[1]).trim() === match.ourTeam);
+                    latestRows.forEach(row => {
+                        const qNum = parseInt(row[3]);
+                        let qData = match.quartersBreakdown.find(q => q.quarterNumber === qNum);
+                        if (qData && row[15] && row[15].length > 5) {
+                            try {
+                                let parsedPBP = JSON.parse(row[15]);
+                                if (Array.isArray(parsedPBP) && parsedPBP.length > 0) qData.playByPlay = parsedPBP;
+                            } catch(e) {}
+                        }
+                    });
+                }
             }
         } catch(e) { console.warn("Failed to fetch PBP for export."); }
         return match;
@@ -2131,11 +1815,7 @@
         csvContent += `Team Performance,${teamUsGoals} Goals,${teamUsShots} Shots,${teamUsPct}%\n`;
         csvContent += `Opponent Performance,${oppGoals} Goals,${oppShots} Shots,${oppPct}%\n`;
         csvContent += `\nPlayer Performance\nPlayer,Goals,Shots,Accuracy\n`;
-        Object.keys(pStats).forEach(p => {
-            let s = pStats[p];
-            let pct = s.shots > 0 ? Math.round((s.goals/s.shots)*100) : 0;
-            csvContent += `"${p}",${s.goals},${s.shots},${pct}%\n`;
-        });
+        Object.keys(pStats).forEach(p => { let s = pStats[p]; let pct = s.shots > 0 ? Math.round((s.goals/s.shots)*100) : 0; csvContent += `"${p}",${s.goals},${s.shots},${pct}%\n`; });
 
         csvContent += `\n--- PLAY-BY-PLAY ---\n`;
         csvContent += "Quarter,Team,Player,Role,Action,Us Score,Opp Score\n";
@@ -2173,18 +1853,12 @@
         const gameNum = (m.gameNumber || `Game_${globalIndex+1}`).replace(/[^a-z0-9]/gi, '_');
         
         link.setAttribute("download", `${safeTeamName}_vs_${safeOppName}_${gameNum}_PBP.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+        document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url);
     }
 
     async function exportAllGamesCSV() {
         const activeHistory = getActiveHistory();
-        if (activeHistory.length === 0) {
-            alert("No games found in the active history to export.");
-            return;
-        }
+        if (activeHistory.length === 0) { alert("No games found in the active history to export."); return; }
 
         const exportBtn = document.getElementById('btn-export-all');
         const ogText = exportBtn.innerText;
@@ -2198,24 +1872,27 @@
                 const response = await fetch(url);
                 const resultText = await response.text();
                 if (resultText !== "Unauthorized") {
-                    const rows = JSON.parse(resultText);
-                    const latestRows = getLatestRows(rows).filter(r => r[13] === carnivalName && r[1] === savedOurTeamName);
-                    latestRows.forEach(row => {
-                        const matchNum = String(row[0]);
-                        const qNum = parseInt(row[3]);
-                        let matchToEdit = activeHistory.find(m => m.gameNumber === matchNum);
-                        if(matchToEdit && matchToEdit.quartersBreakdown) {
-                            let qData = matchToEdit.quartersBreakdown.find(q => q.quarterNumber === qNum);
-                            if (qData && row[15] && row[15].length > 5) {
-                                try {
-                                    let parsedPBP = JSON.parse(row[15]);
-                                    if (Array.isArray(parsedPBP) && parsedPBP.length > 0) qData.playByPlay = parsedPBP;
-                                } catch(e) {}
+                    let rawRows;
+                    try { rawRows = JSON.parse(resultText); } catch(e) {}
+                    if (Array.isArray(rawRows)) {
+                        const latestRows = getLatestRows(rawRows).filter(r => String(r[13]).trim() === carnivalName && String(r[1]).trim() === savedOurTeamName);
+                        latestRows.forEach(row => {
+                            const matchNum = String(row[0]);
+                            const qNum = parseInt(row[3]);
+                            let matchToEdit = activeHistory.find(m => m.gameNumber === matchNum);
+                            if(matchToEdit && matchToEdit.quartersBreakdown) {
+                                let qData = matchToEdit.quartersBreakdown.find(q => q.quarterNumber === qNum);
+                                if (qData && row[15] && row[15].length > 5) {
+                                    try {
+                                        let parsedPBP = JSON.parse(row[15]);
+                                        if (Array.isArray(parsedPBP) && parsedPBP.length > 0) qData.playByPlay = parsedPBP;
+                                    } catch(e) {}
+                                }
                             }
-                        }
-                    });
+                        });
+                    }
                 }
-            } catch(e) { console.warn("Failed to fetch bulk PBP for export."); }
+            } catch(e) {}
         }
         
         document.body.style.cursor = 'default';
@@ -2227,98 +1904,56 @@
         activeHistory.forEach(m => {
             let oppGoals = m.opponentScore || 0;
             let oppMisses = 0;
-            if (m.quartersBreakdown) {
-                m.quartersBreakdown.forEach(q => { oppMisses += (q.oppMisses || 0); });
-            }
-            totalOppGoals += oppGoals;
-            totalOppShots += (oppGoals + oppMisses);
+            if (m.quartersBreakdown) { m.quartersBreakdown.forEach(q => { oppMisses += (q.oppMisses || 0); }); }
+            totalOppGoals += oppGoals; totalOppShots += (oppGoals + oppMisses);
 
             let matchStats = getMatchPlayerStats(m.quartersBreakdown || []);
             Object.keys(matchStats).forEach(p => {
                 if (!pStats[p]) pStats[p] = { goals: 0, shots: 0 };
-                pStats[p].goals += matchStats[p].goals;
-                pStats[p].shots += matchStats[p].shots;
-                totalUsGoals += matchStats[p].goals;
-                totalUsShots += matchStats[p].shots;
+                pStats[p].goals += matchStats[p].goals; pStats[p].shots += matchStats[p].shots;
+                totalUsGoals += matchStats[p].goals; totalUsShots += matchStats[p].shots;
             });
         });
 
-        let teamUsPct = totalUsShots > 0 ? Math.round((totalUsGoals/totalUsShots)*100) : 0;
-        let oppPct = totalOppShots > 0 ? Math.round((totalOppGoals/totalOppShots)*100) : 0;
+        let teamUsPct = totalUsShots > 0 ? Math.round((totalUsGoals/totalUsShots)*100) : 0, oppPct = totalOppShots > 0 ? Math.round((totalOppGoals/totalOppShots)*100) : 0;
 
-        let csvContent = `Squad:,"${players.join(', ')}"\n\n`;
-        csvContent += `--- CARNIVAL SUMMARY ---\n`;
-        csvContent += `Team Performance,${totalUsGoals} Goals,${totalUsShots} Shots,${teamUsPct}%\n`;
-        csvContent += `Opponent Performance,${totalOppGoals} Goals,${totalOppShots} Shots,${oppPct}%\n`;
-        csvContent += `\nPlayer Performance\nPlayer,Goals,Shots,Accuracy\n`;
-        Object.keys(pStats).forEach(p => {
-            let s = pStats[p];
-            let pct = s.shots > 0 ? Math.round((s.goals/s.shots)*100) : 0;
-            csvContent += `"${p}",${s.goals},${s.shots},${pct}%\n`;
-        });
+        let csvContent = `Squad:,"${players.join(', ')}"\n\n--- CARNIVAL SUMMARY ---\nTeam Performance,${totalUsGoals} Goals,${totalUsShots} Shots,${teamUsPct}%\nOpponent Performance,${totalOppGoals} Goals,${totalOppShots} Shots,${oppPct}%\n\nPlayer Performance\nPlayer,Goals,Shots,Accuracy\n`;
+        Object.keys(pStats).forEach(p => { let s = pStats[p], pct = s.shots > 0 ? Math.round((s.goals/s.shots)*100) : 0; csvContent += `"${p}",${s.goals},${s.shots},${pct}%\n`; });
         
         csvContent += `\n\n--- GAME-BY-GAME SUMMARY ---\n`;
         activeHistory.forEach((m, idx) => {
-            const gameName = (m.gameNumber || `Game ${idx+1}`).replace(/"/g, '""');
-            const oppName = (m.opponent || "Opponent").replace(/"/g, '""');
+            const gameName = (m.gameNumber || `Game ${idx+1}`).replace(/"/g, '""'), oppName = (m.opponent || "Opponent").replace(/"/g, '""');
+            let gameOppGoals = m.opponentScore || 0, gameOppMisses = 0;
+            if (m.quartersBreakdown) { m.quartersBreakdown.forEach(q => { gameOppMisses += (q.oppMisses || 0); }); }
+            let gameOppShots = gameOppGoals + gameOppMisses, gameOppPct = gameOppShots > 0 ? Math.round((gameOppGoals/gameOppShots)*100) : 0;
             
-            let gameOppGoals = m.opponentScore || 0;
-            let gameOppMisses = 0;
-            if (m.quartersBreakdown) {
-                m.quartersBreakdown.forEach(q => { gameOppMisses += (q.oppMisses || 0); });
-            }
-            let gameOppShots = gameOppGoals + gameOppMisses;
-            let gameOppPct = gameOppShots > 0 ? Math.round((gameOppGoals/gameOppShots)*100) : 0;
-            
-            let matchStats = getMatchPlayerStats(m.quartersBreakdown || []);
-            let gameUsGoals = 0;
-            let gameUsShots = 0;
-            Object.keys(matchStats).forEach(p => {
-                gameUsGoals += matchStats[p].goals;
-                gameUsShots += matchStats[p].shots;
-            });
+            let matchStats = getMatchPlayerStats(m.quartersBreakdown || []), gameUsGoals = 0, gameUsShots = 0;
+            Object.keys(matchStats).forEach(p => { gameUsGoals += matchStats[p].goals; gameUsShots += matchStats[p].shots; });
             let gameUsPct = gameUsShots > 0 ? Math.round((gameUsGoals/gameUsShots)*100) : 0;
             
-            csvContent += `\n"${gameName} vs ${oppName}"\n`;
-            csvContent += `Team Performance,${gameUsGoals} Goals,${gameUsShots} Shots,${gameUsPct}%\n`;
-            csvContent += `Opponent Performance,${gameOppGoals} Goals,${gameOppShots} Shots,${gameOppPct}%\n`;
-            
+            csvContent += `\n"${gameName} vs ${oppName}"\nTeam Performance,${gameUsGoals} Goals,${gameUsShots} Shots,${gameUsPct}%\nOpponent Performance,${gameOppGoals} Goals,${gameOppShots} Shots,${gameOppPct}%\n`;
             const playerKeys = Object.keys(matchStats);
-            if (playerKeys.length > 0) {
-                csvContent += `Player,Goals,Shots,Accuracy\n`;
-                playerKeys.forEach(p => {
-                    let s = matchStats[p];
-                    let pct = s.shots > 0 ? Math.round((s.goals/s.shots)*100) : 0;
-                    csvContent += `"${p}",${s.goals},${s.shots},${pct}%\n`;
-                });
-            } else {
-                csvContent += `No player stats recorded for this game.\n`;
-            }
+            if (playerKeys.length > 0) { csvContent += `Player,Goals,Shots,Accuracy\n`; playerKeys.forEach(p => { let s = matchStats[p], pct = s.shots > 0 ? Math.round((s.goals/s.shots)*100) : 0; csvContent += `"${p}",${s.goals},${s.shots},${pct}%\n`; }); } 
+            else { csvContent += `No player stats recorded for this game.\n`; }
         });
 
-        csvContent += `\n\n--- PLAY-BY-PLAY ---\n`;
-        csvContent += "Game,Quarter,Team,Player,Role,Action,Us Score,Opp Score\n";
+        csvContent += `\n\n--- PLAY-BY-PLAY ---\nGame,Quarter,Team,Player,Role,Action,Us Score,Opp Score\n`;
 
         activeHistory.forEach((m, idx) => {
             const gameName = (m.gameNumber || `Game_${idx+1}`).replace(/"/g, '""');
-            let runningUs = 0;
-            let runningOpp = 0;
+            let runningUs = 0, runningOpp = 0;
 
             if (m.quartersBreakdown) {
                 m.quartersBreakdown.forEach(q => {
                     if (q.playByPlay && q.playByPlay.length > 0) {
                         q.playByPlay.forEach(p => {
-                            if (p.team === 'Us' && p.isGoal) runningUs++;
-                            if (p.team === 'Opp' && p.isGoal) runningOpp++;
+                            if (p.team === 'Us' && p.isGoal) runningUs++; if (p.team === 'Opp' && p.isGoal) runningOpp++;
                             const teamName = p.team === 'Us' ? (m.ourTeam || "Us") : (m.opponent || "Opponent");
-                            const actionStr = p.isGoal ? "Goal" : "Miss";
-                            const actorClean = p.actor ? p.actor.trim().replace(/"/g, '""') : "Unknown";
-                            const roleClean = p.role ? p.role.toUpperCase() : "-";
+                            const actionStr = p.isGoal ? "Goal" : "Miss", actorClean = p.actor ? p.actor.trim().replace(/"/g, '""') : "Unknown", roleClean = p.role ? p.role.toUpperCase() : "-";
                             csvContent += `"${gameName}",${q.quarterNumber},"${teamName}","${actorClean}","${roleClean}","${actionStr}",${runningUs},${runningOpp}\n`;
                         });
                     } else {
-                        runningUs += (q.gsGoals || 0) + (q.gaGoals || 0);
-                        runningOpp += (q.oppGoals || 0);
+                        runningUs += (q.gsGoals || 0) + (q.gaGoals || 0); runningOpp += (q.oppGoals || 0);
                         csvContent += `"${gameName}",${q.quarterNumber},"Summary","No PBP Data","-","Quarter End",${runningUs},${runningOpp}\n`;
                     }
                 });
@@ -2327,15 +1962,10 @@
 
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.setAttribute("href", url);
-        
+        const link = document.createElement("a"); link.setAttribute("href", url);
         const safeCarnivalName = (carnivalName || "Carnival").replace(/[^a-z0-9]/gi, '_');
         link.setAttribute("download", `${safeCarnivalName}_All_Games_PBP.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+        document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url);
     }
 
     function renderHistory() {
@@ -2351,6 +1981,7 @@
             const globalIndex = carnivalHistory.indexOf(m);
             let teamLabel = m.ourTeam || "Our Team"; const cleanOppName = m.opponent ? m.opponent.trim() : "Opponent";
             const displayMatchName = m.gameNumber || `Game ${activeHistory.indexOf(m) + 1}`;
+            const syncBadge = m.isSynced === false ? `<span class="sync-badge">⚠️ Not Synced</span>` : '';
             const dateStr = `<div style="font-size:0.75rem; color:#64748b; margin-top:2px;">📅 Started: ${m.matchTimestamp || "No timestamp recorded"}</div>`;
             
             let tScore = m.teamScore || 0, oScore = m.opponentScore || 0, teamDisplay = teamLabel, oppDisplay = cleanOppName;
@@ -2395,6 +2026,7 @@
             }
             
             return `<div class="history-card">
+                        ${syncBadge}
                         <div class="history-card-header">
                             <div style="text-align: left;"><h4 style="margin: 0; color: #334155; font-size: 1.1rem;">${displayMatchName}: ${teamDisplay} vs ${oppDisplay}</h4>${dateStr}</div>
                             <div class="history-score">${tScore} - ${oScore}</div>
@@ -2419,102 +2051,27 @@
         const oppScores = activeHistory.map(m => m.opponentScore || 0);
 
         if(chartGamesInstance) chartGamesInstance.destroy();
-        chartGamesInstance = new Chart(document.getElementById('chartGames'), {
-            type: 'line',
-            data: {
-                labels: gameLabels,
-                datasets: [
-                    { label: 'Our Team', data: usScores, borderColor: '#2b5c8f', backgroundColor: 'rgba(43, 92, 143, 0.2)', tension: 0.1, fill: true, borderWidth: 2 },
-                    { label: 'Opponent', data: oppScores, borderColor: '#c62828', backgroundColor: 'rgba(198, 40, 40, 0.2)', tension: 0.1, fill: true, borderWidth: 2 }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: { y: { beginAtZero: true } }
-            }
-        });
+        chartGamesInstance = new Chart(document.getElementById('chartGames'), { type: 'line', data: { labels: gameLabels, datasets: [ { label: 'Our Team', data: usScores, borderColor: '#2b5c8f', backgroundColor: 'rgba(43, 92, 143, 0.2)', tension: 0.1, fill: true, borderWidth: 2 }, { label: 'Opponent', data: oppScores, borderColor: '#c62828', backgroundColor: 'rgba(198, 40, 40, 0.2)', tension: 0.1, fill: true, borderWidth: 2 } ] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } } });
 
-        const pNames = [];
-        const pGoals = [];
-        const pMisses = [];
-        
-        players.forEach(p => {
-            const stats = individualStatsCache[p] || { goals: 0, shots: 0 };
-            if(stats.shots > 0) {
-                pNames.push(p);
-                pGoals.push(stats.goals);
-                pMisses.push(stats.shots - stats.goals);
-            }
-        });
+        const pNames = [], pGoals = [], pMisses = [];
+        players.forEach(p => { const stats = individualStatsCache[p] || { goals: 0, shots: 0 }; if(stats.shots > 0) { pNames.push(p); pGoals.push(stats.goals); pMisses.push(stats.shots - stats.goals); } });
 
         if(chartShootersInstance) chartShootersInstance.destroy();
-        chartShootersInstance = new Chart(document.getElementById('chartShooters'), {
-            type: 'bar',
-            data: {
-                labels: pNames,
-                datasets: [
-                    { label: 'Goals', data: pGoals, backgroundColor: 'rgba(46, 125, 50, 0.2)', borderColor: '#2e7d32', borderWidth: 1 },
-                    { label: 'Misses', data: pMisses, backgroundColor: 'rgba(198, 40, 40, 0.2)', borderColor: '#c62828', borderWidth: 1 }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: { stacked: true },
-                    y: { stacked: true, beginAtZero: true }
-                }
-            }
-        });
+        chartShootersInstance = new Chart(document.getElementById('chartShooters'), { type: 'bar', data: { labels: pNames, datasets: [ { label: 'Goals', data: pGoals, backgroundColor: 'rgba(46, 125, 50, 0.2)', borderColor: '#2e7d32', borderWidth: 1 }, { label: 'Misses', data: pMisses, backgroundColor: 'rgba(198, 40, 40, 0.2)', borderColor: '#c62828', borderWidth: 1 } ] }, options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } } } });
 
-        let qCounts = { 1: 0, 2: 0, 3: 0, 4: 0 };
-        let qUsGoals = { 1: 0, 2: 0, 3: 0, 4: 0 };
-        let qOppGoals = { 1: 0, 2: 0, 3: 0, 4: 0 };
-        
-        activeHistory.forEach(m => {
-            if(m.quartersBreakdown) {
-                m.quartersBreakdown.forEach(q => {
-                    if(q.quarterNumber >= 1 && q.quarterNumber <= 4) {
-                        qCounts[q.quarterNumber]++;
-                        qUsGoals[q.quarterNumber] += (q.gsGoals || 0) + (q.gaGoals || 0);
-                        qOppGoals[q.quarterNumber] += (q.oppGoals || 0);
-                    }
-                });
-            }
-        });
+        let qCounts = { 1: 0, 2: 0, 3: 0, 4: 0 }, qUsGoals = { 1: 0, 2: 0, 3: 0, 4: 0 }, qOppGoals = { 1: 0, 2: 0, 3: 0, 4: 0 };
+        activeHistory.forEach(m => { if(m.quartersBreakdown) { m.quartersBreakdown.forEach(q => { if(q.quarterNumber >= 1 && q.quarterNumber <= 4) { qCounts[q.quarterNumber]++; qUsGoals[q.quarterNumber] += (q.gsGoals || 0) + (q.gaGoals || 0); qOppGoals[q.quarterNumber] += (q.oppGoals || 0); } }); } });
 
         const qLabels = ['Q1', 'Q2', 'Q3', 'Q4'];
         const qUsAvg = qLabels.map((_, i) => qCounts[i+1] ? (qUsGoals[i+1] / qCounts[i+1]).toFixed(1) : 0);
         const qOppAvg = qLabels.map((_, i) => qCounts[i+1] ? (qOppGoals[i+1] / qCounts[i+1]).toFixed(1) : 0);
 
         if(chartQuartersInstance) chartQuartersInstance.destroy();
-        chartQuartersInstance = new Chart(document.getElementById('chartQuarters'), {
-            type: 'bar',
-            data: {
-                labels: qLabels,
-                datasets: [
-                    { label: 'Us Avg Goals', data: qUsAvg, backgroundColor: 'rgba(43, 92, 143, 0.2)', borderColor: '#2b5c8f', borderWidth: 1 },
-                    { label: 'Opp Avg Goals', data: qOppAvg, backgroundColor: 'rgba(198, 40, 40, 0.2)', borderColor: '#c62828', borderWidth: 1 }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: { y: { beginAtZero: true } }
-            }
-        });
+        chartQuartersInstance = new Chart(document.getElementById('chartQuarters'), { type: 'bar', data: { labels: qLabels, datasets: [ { label: 'Us Avg Goals', data: qUsAvg, backgroundColor: 'rgba(43, 92, 143, 0.2)', borderColor: '#2b5c8f', borderWidth: 1 }, { label: 'Opp Avg Goals', data: qOppAvg, backgroundColor: 'rgba(198, 40, 40, 0.2)', borderColor: '#c62828', borderWidth: 1 } ] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } } });
     }
 
     function resetLiveGame() {
-        currentGame = { 
-            gameNumber: "", ourTeam: savedOurTeamName, opponent: "", currentQuarter: 1, 
-            matchTotalScore: 0, opponentTotalScore: 0, quartersData: [], 
-            liveGs: { goals: 0, misses: 0 }, liveGa: { goals: 0, misses: 0 }, liveOpponent: { goals: 0, misses: 0 }, 
-            gsPlayer: "", gaPlayer: "", runningGameTotals: {}, runningOppTotals: { goals: 0, shots: 0 }, 
-            log: [], shotHistory: [], oppShotHistory: [], playByPlay: [], matchTimestamp: null, 
-            isDirty: false, originalQuarterBackup: null, isEditMode: false, loadedPastGame: false 
-        };
+        currentGame = { gameNumber: "", ourTeam: savedOurTeamName, opponent: "", currentQuarter: 1, matchTotalScore: 0, opponentTotalScore: 0, quartersData: [], liveGs: { goals: 0, misses: 0 }, liveGa: { goals: 0, misses: 0 }, liveOpponent: { goals: 0, misses: 0 }, gsPlayer: "", gaPlayer: "", runningGameTotals: {}, runningOppTotals: { goals: 0, shots: 0 }, log: [], shotHistory: [], oppShotHistory: [], playByPlay: [], matchTimestamp: null, isDirty: false, originalQuarterBackup: null, isEditMode: false, loadedPastGame: false };
         setupDropdownInitialState('opponent-select', 'opponent-name-input', "", "");
         document.getElementById('display-opp').innerText = "???"; document.getElementById('opp-card-title').innerHTML = `<strong>Opponent</strong>`;
         clearDropdownSelectors(); currentGame.gsPlayer = "Unassigned"; currentGame.gaPlayer = "Unassigned"; document.getElementById('name-gs').innerText = "Unassigned"; document.getElementById('name-ga').innerText = "Unassigned";
