@@ -32,6 +32,16 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            transition: background-color 0.3s ease;
+        }
+        
+        /* Edit Mode Styles */
+        body.edit-mode-active {
+            background-color: #fffbeb !important; /* Light amber/yellow */
+        }
+        body.edit-mode-active .card {
+            border: 1px solid #fde68a;
+            box-shadow: 0 4px 10px rgba(217, 119, 6, 0.1);
         }
 
         .container { width: 100%; max-width: 650px; }
@@ -42,6 +52,7 @@
         .card {
             background: var(--card-bg); border-radius: 10px; padding: 15px; margin-bottom: 15px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            transition: border 0.3s ease, box-shadow 0.3s ease;
         }
 
         /* Dropdown/Accordion Styles */
@@ -484,7 +495,14 @@
     let rosters = JSON.parse(localStorage.getItem('netball_rosters')) || {};
     let players = []; 
 
-    let currentGame = { gameNumber: "", ourTeam: "", opponent: "", currentQuarter: 1, matchTotalScore: 0, opponentTotalScore: 0, quartersData: [], liveGs: { goals: 0, misses: 0 }, liveGa: { goals: 0, misses: 0 }, liveOpponent: { goals: 0, misses: 0 }, gsPlayer: "", gaPlayer: "", runningGameTotals: {}, runningOppTotals: { goals: 0, shots: 0 }, log: [], shotHistory: [], oppShotHistory: [], playByPlay: [], matchTimestamp: null };
+    let currentGame = { 
+        gameNumber: "", ourTeam: "", opponent: "", currentQuarter: 1, 
+        matchTotalScore: 0, opponentTotalScore: 0, quartersData: [], 
+        liveGs: { goals: 0, misses: 0 }, liveGa: { goals: 0, misses: 0 }, liveOpponent: { goals: 0, misses: 0 }, 
+        gsPlayer: "", gaPlayer: "", runningGameTotals: {}, runningOppTotals: { goals: 0, shots: 0 }, 
+        log: [], shotHistory: [], oppShotHistory: [], playByPlay: [], matchTimestamp: null, 
+        isDirty: false, originalQuarterBackup: null, isEditMode: false, loadedPastGame: false 
+    };
 
     // Chart.js instances
     let chartShootersInstance = null;
@@ -574,7 +592,8 @@
         if (!userToken || !playerName) return;
         
         const pushTimestamp = Date.now();
-        let exportData = [[action, savedOurTeamName, "None", "Roster", 0, 0, playerName, "Squad", 0, 0, 0, "0%", getCleanTimestamp(), carnivalName, pushTimestamp]];
+        // Sending "[]" as the 16th element to cover the PBP json column structure
+        let exportData = [[action, savedOurTeamName, "None", "Roster", 0, 0, playerName, "Squad", 0, 0, 0, "0%", getCleanTimestamp(), carnivalName, pushTimestamp, "[]"]];
         
         try {
             const payload = { token: userToken, matchData: exportData };
@@ -688,27 +707,52 @@
                 if (!matchesMap[uniqueKey]) matchesMap[uniqueKey] = { carnivalName: rowCarnival, gameNumber: matchId, ourTeam: teamName, opponent: opponentName, matchTimestamp: rowTimestamp, quarters: {} };
                 
                 if (!matchesMap[uniqueKey].quarters[qNum]) {
-                    matchesMap[uniqueKey].quarters[qNum] = { quarterNumber: qNum, gsName: "", gaName: "", gsGoals: 0, gsMisses: 0, gaGoals: 0, gaMisses: 0, oppGoals: oppGoals, oppMisses: 0, shotHistory: [], oppShotHistory: [], playByPlay: [], oppProcessed: false };
+                    matchesMap[uniqueKey].quarters[qNum] = { quarterNumber: qNum, gsName: "", gaName: "", gsGoals: 0, gsMisses: 0, gaGoals: 0, gaMisses: 0, oppGoals: oppGoals, oppMisses: 0, shotHistory: [], oppShotHistory: [], playByPlay: [], oppProcessed: false, pbpLoadedFromCloud: false };
                 }
                 
                 let qObj = matchesMap[uniqueKey].quarters[qNum];
                 if (pos === "GS") { qObj.gsName = player; qObj.gsGoals += goals; qObj.gsMisses += misses; } 
                 else if (pos === "GA") { qObj.gaName = player; qObj.gaGoals += goals; qObj.gaMisses += misses; }
-                
-                for (let g = 0; g < goals; g++) {
-                    qObj.shotHistory.push({ role: pos.toLowerCase(), isGoal: true, name: player });
-                    qObj.playByPlay.push({ team: 'Us', actor: player, role: pos.toLowerCase(), isGoal: true });
-                }
-                for (let m = 0; m < misses; m++) {
-                    qObj.shotHistory.push({ role: pos.toLowerCase(), isGoal: false, name: player });
-                    qObj.playByPlay.push({ team: 'Us', actor: player, role: pos.toLowerCase(), isGoal: false });
-                }
-                if (!qObj.oppProcessed && oppGoals > 0) {
-                    for (let og = 0; og < oppGoals; og++) {
-                        qObj.oppShotHistory.push(true);
-                        qObj.playByPlay.push({ team: 'Opp', actor: opponentName, isGoal: true });
+
+                // Try to parse exact chronological PBP string if it exists
+                if (!qObj.pbpLoadedFromCloud) {
+                    if (row[15] && row[15].length > 5) {
+                        try {
+                            let parsedPBP = JSON.parse(row[15]);
+                            if (Array.isArray(parsedPBP)) {
+                                qObj.playByPlay = parsedPBP;
+                                qObj.shotHistory = [];
+                                qObj.oppShotHistory = [];
+                                parsedPBP.forEach(p => {
+                                    if (p.team === 'Us') {
+                                        qObj.shotHistory.push({ role: p.role, isGoal: p.isGoal, name: p.actor });
+                                    } else if (p.team === 'Opp') {
+                                        qObj.oppShotHistory.push(p.isGoal);
+                                    }
+                                });
+                                qObj.pbpLoadedFromCloud = true;
+                            }
+                        } catch(e) {}
                     }
-                    qObj.oppProcessed = true;
+                }
+                
+                // Fallback for older legacy sheets data where PBP array string is missing
+                if (!qObj.pbpLoadedFromCloud) {
+                    for (let g = 0; g < goals; g++) {
+                        qObj.shotHistory.push({ role: pos.toLowerCase(), isGoal: true, name: player });
+                        qObj.playByPlay.push({ team: 'Us', actor: player, role: pos.toLowerCase(), isGoal: true });
+                    }
+                    for (let m = 0; m < misses; m++) {
+                        qObj.shotHistory.push({ role: pos.toLowerCase(), isGoal: false, name: player });
+                        qObj.playByPlay.push({ team: 'Us', actor: player, role: pos.toLowerCase(), isGoal: false });
+                    }
+                    if (!qObj.oppProcessed && oppGoals > 0) {
+                        for (let og = 0; og < oppGoals; og++) {
+                            qObj.oppShotHistory.push(true);
+                            qObj.playByPlay.push({ team: 'Opp', actor: opponentName, isGoal: true });
+                        }
+                        qObj.oppProcessed = true;
+                    }
                 }
             });
 
@@ -934,27 +978,50 @@
                 if (!matchesMap[uniqueKey]) matchesMap[uniqueKey] = { carnivalName: rowCarnival, gameNumber: matchId, ourTeam: teamName, opponent: opponentName, matchTimestamp: rowTimestamp, quarters: {} };
                 
                 if (!matchesMap[uniqueKey].quarters[qNum]) {
-                    matchesMap[uniqueKey].quarters[qNum] = { quarterNumber: qNum, gsName: "", gaName: "", gsGoals: 0, gsMisses: 0, gaGoals: 0, gaMisses: 0, oppGoals: oppGoals, oppMisses: 0, shotHistory: [], oppShotHistory: [], playByPlay: [], oppProcessed: false };
+                    matchesMap[uniqueKey].quarters[qNum] = { quarterNumber: qNum, gsName: "", gaName: "", gsGoals: 0, gsMisses: 0, gaGoals: 0, gaMisses: 0, oppGoals: oppGoals, oppMisses: 0, shotHistory: [], oppShotHistory: [], playByPlay: [], oppProcessed: false, pbpLoadedFromCloud: false };
                 }
                 
                 let qObj = matchesMap[uniqueKey].quarters[qNum];
                 if (pos === "GS") { qObj.gsName = player; qObj.gsGoals += goals; qObj.gsMisses += misses; } 
                 else if (pos === "GA") { qObj.gaName = player; qObj.gaGoals += goals; qObj.gaMisses += misses; }
-                
-                for (let g = 0; g < goals; g++) {
-                    qObj.shotHistory.push({ role: pos.toLowerCase(), isGoal: true, name: player });
-                    qObj.playByPlay.push({ team: 'Us', actor: player, role: pos.toLowerCase(), isGoal: true });
-                }
-                for (let m = 0; m < misses; m++) {
-                    qObj.shotHistory.push({ role: pos.toLowerCase(), isGoal: false, name: player });
-                    qObj.playByPlay.push({ team: 'Us', actor: player, role: pos.toLowerCase(), isGoal: false });
-                }
-                if (!qObj.oppProcessed && oppGoals > 0) {
-                    for (let og = 0; og < oppGoals; og++) {
-                        qObj.oppShotHistory.push(true);
-                        qObj.playByPlay.push({ team: 'Opp', actor: opponentName, isGoal: true });
+
+                if (!qObj.pbpLoadedFromCloud) {
+                    if (row[15] && row[15].length > 5) {
+                        try {
+                            let parsedPBP = JSON.parse(row[15]);
+                            if (Array.isArray(parsedPBP)) {
+                                qObj.playByPlay = parsedPBP;
+                                qObj.shotHistory = [];
+                                qObj.oppShotHistory = [];
+                                parsedPBP.forEach(p => {
+                                    if (p.team === 'Us') {
+                                        qObj.shotHistory.push({ role: p.role, isGoal: p.isGoal, name: p.actor });
+                                    } else if (p.team === 'Opp') {
+                                        qObj.oppShotHistory.push(p.isGoal);
+                                    }
+                                });
+                                qObj.pbpLoadedFromCloud = true;
+                            }
+                        } catch(e) {}
                     }
-                    qObj.oppProcessed = true;
+                }
+
+                if (!qObj.pbpLoadedFromCloud) {
+                    for (let g = 0; g < goals; g++) {
+                        qObj.shotHistory.push({ role: pos.toLowerCase(), isGoal: true, name: player });
+                        qObj.playByPlay.push({ team: 'Us', actor: player, role: pos.toLowerCase(), isGoal: true });
+                    }
+                    for (let m = 0; m < misses; m++) {
+                        qObj.shotHistory.push({ role: pos.toLowerCase(), isGoal: false, name: player });
+                        qObj.playByPlay.push({ team: 'Us', actor: player, role: pos.toLowerCase(), isGoal: false });
+                    }
+                    if (!qObj.oppProcessed && oppGoals > 0) {
+                        for (let og = 0; og < oppGoals; og++) {
+                            qObj.oppShotHistory.push(true);
+                            qObj.playByPlay.push({ team: 'Opp', actor: opponentName, isGoal: true });
+                        }
+                        qObj.oppProcessed = true;
+                    }
                 }
             });
 
@@ -1087,6 +1154,7 @@
         const activeLiveShots = currentGame.liveGs.goals + currentGame.liveGs.misses + currentGame.liveGa.goals + currentGame.liveGa.misses + currentGame.liveOpponent.goals + currentGame.liveOpponent.misses;
         if (activeLiveShots === 0) { alert("No stats recorded yet in this quarter to reset."); return; }
         if(confirm(`Completely discard all live stats currently tracked for Quarter ${currentGame.currentQuarter}? This cannot be undone.`)) {
+            currentGame.isDirty = true;
             currentGame.liveGs = { goals: 0, misses: 0 }; currentGame.liveGa = { goals: 0, misses: 0 }; currentGame.liveOpponent = { goals: 0, misses: 0 };
             currentGame.shotHistory = []; currentGame.oppShotHistory = []; currentGame.playByPlay = [];
             currentGame.log = [`[RESET] Quarter ${currentGame.currentQuarter} stats cleared.`];
@@ -1104,10 +1172,30 @@
 
     function editQuarter(targetQNum) {
         const activeLiveShots = currentGame.liveGs.goals + currentGame.liveGs.misses + currentGame.liveGa.goals + currentGame.liveGa.misses + currentGame.liveOpponent.goals + currentGame.liveOpponent.misses;
-        if (activeLiveShots > 0 && currentGame.currentQuarter !== targetQNum) { if (!confirm(`You have unsaved actions in Quarter ${currentGame.currentQuarter}. Navigating away will discard them. Proceed?`)) return; }
+        
+        if (activeLiveShots > 0 && currentGame.currentQuarter !== targetQNum) { 
+            if (currentGame.isDirty) {
+                if (confirm(`You have unsaved changes in Quarter ${currentGame.currentQuarter}. Click OK to SAVE them, or Cancel to DISCARD changes and revert.`)) {
+                    forceSaveCurrentQuarter();
+                } else {
+                    if (currentGame.originalQuarterBackup) {
+                        currentGame.quartersData.push(currentGame.originalQuarterBackup);
+                        currentGame.quartersData.sort((a, b) => a.quarterNumber - b.quarterNumber);
+                    }
+                }
+            } else {
+                forceSaveCurrentQuarter();
+            }
+        }
+        
         const qIndex = currentGame.quartersData.findIndex(q => q.quarterNumber === targetQNum);
         if (qIndex === -1) { alert("Quarter data not found."); return; }
         const qData = currentGame.quartersData.splice(qIndex, 1)[0];
+        
+        currentGame.originalQuarterBackup = JSON.parse(JSON.stringify(qData));
+        currentGame.isDirty = false;
+        currentGame.isEditMode = true; // Actively triggering edit mode styles
+        
         currentGame.currentQuarter = targetQNum;
         currentGame.liveGs = { goals: qData.gsGoals, misses: qData.gsMisses }; currentGame.liveGa = { goals: qData.gaGoals, misses: qData.gaMisses }; currentGame.liveOpponent = { goals: qData.oppGoals || 0, misses: qData.oppMisses || 0 };
         currentGame.shotHistory = qData.shotHistory ? [...qData.shotHistory] : []; currentGame.oppShotHistory = qData.oppShotHistory ? [...qData.oppShotHistory] : []; currentGame.playByPlay = qData.playByPlay ? [...qData.playByPlay] : [];
@@ -1142,6 +1230,7 @@
     function recordOppShot(isGoal, btnElement) {
         triggerFlash(btnElement, isGoal);
         ensureTimestamp();
+        currentGame.isDirty = true;
         if (isGoal) currentGame.liveOpponent.goals++; else currentGame.liveOpponent.misses++;
         recalculateMatchScores(); currentGame.oppShotHistory.push(isGoal); currentGame.playByPlay.push({ team: 'Opp', actor: currentGame.opponent || "Opponent", isGoal: isGoal });
         const outcome = isGoal ? "scored a Goal" : "missed", oppNameDisplay = currentGame.opponent ? currentGame.opponent.trim().toUpperCase() : "OPPONENT";
@@ -1153,6 +1242,7 @@
         if ((role === 'gs' && (!currentGame.gsPlayer || currentGame.gsPlayer === "Unassigned")) || (role === 'ga' && (!currentGame.gaPlayer || currentGame.gaPlayer === "Unassigned"))) { alert("Please assign a player to this position first!"); return; }
         triggerFlash(btnElement, isGoal);
         ensureTimestamp();
+        currentGame.isDirty = true;
         const targetDataObj = role === 'gs' ? currentGame.liveGs : currentGame.liveGa, playerName = role === 'gs' ? currentGame.gsPlayer : currentGame.gaPlayer;
         if (isGoal) targetDataObj.goals++; else targetDataObj.misses++;
         recalculateMatchScores(); const outcome = isGoal ? "scored a Goal" : "missed";
@@ -1166,6 +1256,7 @@
             alert("No actions to undo.");
             return;
         }
+        currentGame.isDirty = true;
         const lastAction = currentGame.playByPlay.pop();
 
         if (lastAction.team === 'Us') {
@@ -1267,6 +1358,16 @@
         if (currentGame.currentQuarter >= 5) { qBtn.style.display = "none"; qResetBtn.style.display = "none"; } else { qBtn.style.display = "block"; qResetBtn.style.display = "block"; qBtn.innerText = `⏱️ End Quarter ${currentGame.currentQuarter}`; }
         
         renderCurrentGameShooterTotals();
+        
+        // Handle Edit Mode visual cues
+        const saveBtn = document.getElementById('btn-master-save');
+        if (currentGame.isEditMode) {
+            document.body.classList.add('edit-mode-active');
+            if (saveBtn) saveBtn.innerText = "💾 Save Edits";
+        } else {
+            document.body.classList.remove('edit-mode-active');
+            if (saveBtn) saveBtn.innerText = "🔒 Save & Finalise Game";
+        }
 
         window.dispatchEvent(new Event('scroll'));
     }
@@ -1290,6 +1391,13 @@
         if (totalQuarterActions === 0) { if(!confirm("No stats recorded this quarter. End quarter anyway?")) return; }
         if(confirm(`Confirm ending Quarter ${currentGame.currentQuarter}? Stats will save to this segment.`)) {
             forceSaveCurrentQuarter();
+            currentGame.isDirty = false;
+            currentGame.originalQuarterBackup = null;
+            
+            if (!currentGame.loadedPastGame) {
+                currentGame.isEditMode = false;
+            }
+            
             let nextQ = 1; const savedQNums = currentGame.quartersData.map(q => q.quarterNumber);
             while(savedQNums.includes(nextQ)) nextQ++;
             currentGame.currentQuarter = nextQ; 
@@ -1381,6 +1489,30 @@
         }
         return qPlayerStats;
     }
+    
+    // New function specifically formatting by name AND role to split stats for Google Sheets Export
+    function getQuarterPlayerStatsForExport(q) {
+        let stats = [];
+        if (q.shotHistory && q.shotHistory.length > 0) {
+            let map = {};
+            q.shotHistory.forEach(shot => {
+                let role = shot.role ? shot.role.toUpperCase() : "Unknown";
+                let key = `${shot.name}::${role}`;
+                if (!map[key]) map[key] = { name: shot.name, role: role, goals: 0, shots: 0 };
+                map[key].shots++;
+                if (shot.isGoal) map[key].goals++;
+            });
+            stats = Object.values(map);
+        } else {
+            if (q.gsName && ((q.gsGoals || 0) + (q.gsMisses || 0) > 0)) {
+                stats.push({ name: q.gsName, role: 'GS', goals: q.gsGoals, shots: q.gsGoals + q.gsMisses });
+            }
+            if (q.gaName && ((q.gaGoals || 0) + (q.gaMisses || 0) > 0)) {
+                stats.push({ name: q.gaName, role: 'GA', goals: q.gaGoals, shots: q.gaGoals + q.gaMisses });
+            }
+        }
+        return stats;
+    }
 
     function generateCleanExportText(teamName, opponent, teamScore, oppScore, quartersBreakdown, options) {
         const cleanTeam = teamName ? teamName.trim() : "Team", cleanOpp = opponent ? opponent.trim() : "Opponent";
@@ -1445,32 +1577,22 @@
 
         if (matchDataPayload.quartersBreakdown) {
             matchDataPayload.quartersBreakdown.forEach(q => {
-                const qNum = q.quarterNumber, qStats = getQuarterPlayerStats(q); let hasUsData = false;
+                const qNum = q.quarterNumber;
+                let hasUsData = false;
+                const pbpString = JSON.stringify(q.playByPlay || []);
                 
-                Object.keys(qStats).forEach(playerName => {
-                    hasUsData = true; let s = qStats[playerName], pos = "Unknown";
-                    
-                    if (q.shotHistory && q.shotHistory.length > 0) {
-                        const playedRoles = [...new Set(q.shotHistory.filter(shot => shot.name === playerName).map(shot => shot.role.toUpperCase()))];
-                        if (playedRoles.length > 0) pos = playedRoles.join('/');
-                    }
-                    
-                    if (pos === "Unknown") {
-                        if (q.gsName === playerName) pos = "GS"; 
-                        if (q.gaName === playerName) pos = "GA";
-                    }
-
-                    let misses = s.shots - s.goals, pct = s.shots > 0 ? Math.round((s.goals / s.shots) * 100) : 0;
-                    exportData.push([matchName, team, opp, qNum, s.goals, q.oppGoals || 0, playerName, pos, s.goals, misses, s.shots, `${pct}%`, finalTimestamp, carnivalName, pushTimestamp]);
+                const exportStats = getQuarterPlayerStatsForExport(q);
+                
+                exportStats.forEach(s => {
+                    hasUsData = true; 
+                    let misses = s.shots - s.goals;
+                    let pct = s.shots > 0 ? Math.round((s.goals / s.shots) * 100) : 0;
+                    exportData.push([matchName, team, opp, qNum, s.goals, q.oppGoals || 0, s.name, s.role, s.goals, misses, s.shots, `${pct}%`, finalTimestamp, carnivalName, pushTimestamp, pbpString]);
                 });
                 
-                if (!hasUsData && (q.oppGoals || 0) > 0) exportData.push([matchName, team, opp, qNum, 0, q.oppGoals || 0, "No Data", "-", 0, 0, 0, "0%", finalTimestamp, carnivalName, pushTimestamp]);
+                if (!hasUsData && (q.oppGoals || 0) > 0) exportData.push([matchName, team, opp, qNum, 0, q.oppGoals || 0, "No Data", "-", 0, 0, 0, "0%", finalTimestamp, carnivalName, pushTimestamp, pbpString]);
             });
         }
-        
-        players.forEach(p => {
-            exportData.push([matchName, team, opp, "Roster", 0, 0, p, "Squad", 0, 0, 0, "0%", finalTimestamp, carnivalName, pushTimestamp]);
-        });
         
         if (exportData.length === 0) return;
         try {
@@ -1532,6 +1654,21 @@
         if (activeLiveShots > 0 || currentGame.quartersData.length > 0) { if (!confirm("Warning: Loading this game will discard your active data. Proceed?")) return; }
         const matchToEdit = carnivalHistory[globalIndex];
         
+        // Find Available Quarters
+        let targetQ = 1;
+        if (matchToEdit.quartersBreakdown && matchToEdit.quartersBreakdown.length > 0) {
+            const availableQs = matchToEdit.quartersBreakdown.map(q => q.quarterNumber);
+            let qChoice = prompt(`Which quarter would you like to edit?\nAvailable quarters: ${availableQs.join(', ')}`);
+            
+            if (qChoice === null) return; // User canceled the prompt
+            
+            targetQ = parseInt(qChoice);
+            if (isNaN(targetQ) || !availableQs.includes(targetQ)) {
+                alert("Invalid quarter selected. Edit cancelled.");
+                return;
+            }
+        }
+        
         currentGame.gameNumber = matchToEdit.gameNumber || `Game ${getActiveHistory().indexOf(matchToEdit) + 1}`; 
         currentGame.ourTeam = matchToEdit.ourTeam || savedOurTeamName; 
         currentGame.opponent = matchToEdit.opponent;
@@ -1539,11 +1676,15 @@
         currentGame.matchTimestamp = matchToEdit.matchTimestamp || null;
         
         if (currentGame.quartersData && currentGame.quartersData.length > 0) {
-            const maxQ = Math.max(...currentGame.quartersData.map(q => q.quarterNumber));
-            const qIndex = currentGame.quartersData.findIndex(q => q.quarterNumber === maxQ);
+            const qIndex = currentGame.quartersData.findIndex(q => q.quarterNumber === targetQ);
             const lastQData = currentGame.quartersData.splice(qIndex, 1)[0];
             
-            currentGame.currentQuarter = maxQ;
+            currentGame.originalQuarterBackup = JSON.parse(JSON.stringify(lastQData));
+            currentGame.isDirty = false;
+            currentGame.isEditMode = true; 
+            currentGame.loadedPastGame = true; 
+            
+            currentGame.currentQuarter = targetQ;
             currentGame.liveGs = { goals: lastQData.gsGoals, misses: lastQData.gsMisses };
             currentGame.liveGa = { goals: lastQData.gaGoals, misses: lastQData.gaMisses };
             currentGame.liveOpponent = { goals: lastQData.oppGoals || 0, misses: lastQData.oppMisses || 0 };
@@ -1561,12 +1702,12 @@
                     currentGame.playByPlay.forEach(p => {
                         if (p.team === 'Us' && p.isGoal) tempUs++; if (p.team === 'Opp' && p.isGoal) tempOpp++;
                         const outcome = p.isGoal ? "scored a Goal" : "missed";
-                        if (p.team === 'Us') currentGame.log.unshift(`[Q${maxQ}] [${tempUs}-${tempOpp}] ${p.role.toUpperCase()} (${p.actor}) ${outcome}.`);
-                        else currentGame.log.unshift(`[Q${maxQ}] [${tempUs}-${tempOpp}] <strong>${p.actor ? p.actor.trim().toUpperCase() : "OPPONENT"}</strong> ${outcome}.`);
+                        if (p.team === 'Us') currentGame.log.unshift(`[Q${targetQ}] [${tempUs}-${tempOpp}] ${p.role.toUpperCase()} (${p.actor}) ${outcome}.`);
+                        else currentGame.log.unshift(`[Q${targetQ}] [${tempUs}-${tempOpp}] <strong>${p.actor ? p.actor.trim().toUpperCase() : "OPPONENT"}</strong> ${outcome}.`);
                     });
                 }
             }
-            currentGame.log.unshift(`[EDIT MODE] Loaded game vs ${currentGame.opponent.trim()}. Returned to Q${maxQ}.`);
+            currentGame.log.unshift(`[EDIT MODE] Loaded game vs ${currentGame.opponent.trim()}. Returned to Q${targetQ}.`);
 
             currentGame.gsPlayer = players.includes(lastQData.gsName) ? lastQData.gsName : "Unassigned";
             currentGame.gaPlayer = players.includes(lastQData.gaName) ? lastQData.gaName : "Unassigned";
@@ -1581,6 +1722,10 @@
             
             clearDropdownSelectors();
             currentGame.gsPlayer = "Unassigned"; currentGame.gaPlayer = "Unassigned";
+            currentGame.isDirty = false;
+            currentGame.originalQuarterBackup = null;
+            currentGame.isEditMode = true;
+            currentGame.loadedPastGame = true;
         }
         
         rebuildRunningTotals(); recalculateMatchScores();
@@ -1618,7 +1763,40 @@
     function exportGameCSV(globalIndex) {
         const m = carnivalHistory[globalIndex];
         
+        let teamUsGoals = 0, teamUsShots = 0;
+        let pStats = {};
+        let oppGoals = m.opponentScore || 0;
+        let oppMisses = 0;
+
+        if (m.quartersBreakdown) {
+            m.quartersBreakdown.forEach(q => {
+                oppMisses += (q.oppMisses || 0);
+                const qStats = getQuarterPlayerStats(q);
+                Object.keys(qStats).forEach(p => {
+                    if(!pStats[p]) pStats[p] = {goals:0, shots:0};
+                    pStats[p].goals += qStats[p].goals;
+                    pStats[p].shots += qStats[p].shots;
+                    teamUsGoals += qStats[p].goals;
+                    teamUsShots += qStats[p].shots;
+                });
+            });
+        }
+        let teamUsPct = teamUsShots > 0 ? Math.round((teamUsGoals/teamUsShots)*100) : 0;
+        let oppShots = oppGoals + oppMisses;
+        let oppPct = oppShots > 0 ? Math.round((oppGoals/oppShots)*100) : 0;
+        
         let csvContent = `Squad:,"${players.join(', ')}"\n\n`;
+        csvContent += `--- GAME SUMMARY ---\n`;
+        csvContent += `Team Performance,${teamUsGoals} Goals,${teamUsShots} Shots,${teamUsPct}%\n`;
+        csvContent += `Opponent Performance,${oppGoals} Goals,${oppShots} Shots,${oppPct}%\n`;
+        csvContent += `\nPlayer Performance\nPlayer,Goals,Shots,Accuracy\n`;
+        Object.keys(pStats).forEach(p => {
+            let s = pStats[p];
+            let pct = s.shots > 0 ? Math.round((s.goals/s.shots)*100) : 0;
+            csvContent += `"${p}",${s.goals},${s.shots},${pct}%\n`;
+        });
+
+        csvContent += `\n--- PLAY-BY-PLAY ---\n`;
         csvContent += "Quarter,Team,Player,Role,Action,Us Score,Opp Score\n";
 
         let runningUs = 0;
@@ -1667,7 +1845,82 @@
             return;
         }
 
+        let totalUsGoals = 0, totalUsShots = 0, totalOppGoals = 0, totalOppShots = 0;
+        let pStats = {};
+
+        activeHistory.forEach(m => {
+            let oppGoals = m.opponentScore || 0;
+            let oppMisses = 0;
+            if (m.quartersBreakdown) {
+                m.quartersBreakdown.forEach(q => { oppMisses += (q.oppMisses || 0); });
+            }
+            totalOppGoals += oppGoals;
+            totalOppShots += (oppGoals + oppMisses);
+
+            let matchStats = getMatchPlayerStats(m.quartersBreakdown || []);
+            Object.keys(matchStats).forEach(p => {
+                if (!pStats[p]) pStats[p] = { goals: 0, shots: 0 };
+                pStats[p].goals += matchStats[p].goals;
+                pStats[p].shots += matchStats[p].shots;
+                totalUsGoals += matchStats[p].goals;
+                totalUsShots += matchStats[p].shots;
+            });
+        });
+
+        let teamUsPct = totalUsShots > 0 ? Math.round((totalUsGoals/totalUsShots)*100) : 0;
+        let oppPct = totalOppShots > 0 ? Math.round((totalOppGoals/totalOppShots)*100) : 0;
+
         let csvContent = `Squad:,"${players.join(', ')}"\n\n`;
+        csvContent += `--- CARNIVAL SUMMARY ---\n`;
+        csvContent += `Team Performance,${totalUsGoals} Goals,${totalUsShots} Shots,${teamUsPct}%\n`;
+        csvContent += `Opponent Performance,${totalOppGoals} Goals,${totalOppShots} Shots,${oppPct}%\n`;
+        csvContent += `\nPlayer Performance\nPlayer,Goals,Shots,Accuracy\n`;
+        Object.keys(pStats).forEach(p => {
+            let s = pStats[p];
+            let pct = s.shots > 0 ? Math.round((s.goals/s.shots)*100) : 0;
+            csvContent += `"${p}",${s.goals},${s.shots},${pct}%\n`;
+        });
+        
+        csvContent += `\n\n--- GAME-BY-GAME SUMMARY ---\n`;
+        activeHistory.forEach((m, idx) => {
+            const gameName = (m.gameNumber || `Game ${idx+1}`).replace(/"/g, '""');
+            const oppName = (m.opponent || "Opponent").replace(/"/g, '""');
+            
+            let gameOppGoals = m.opponentScore || 0;
+            let gameOppMisses = 0;
+            if (m.quartersBreakdown) {
+                m.quartersBreakdown.forEach(q => { gameOppMisses += (q.oppMisses || 0); });
+            }
+            let gameOppShots = gameOppGoals + gameOppMisses;
+            let gameOppPct = gameOppShots > 0 ? Math.round((gameOppGoals/gameOppShots)*100) : 0;
+            
+            let matchStats = getMatchPlayerStats(m.quartersBreakdown || []);
+            let gameUsGoals = 0;
+            let gameUsShots = 0;
+            Object.keys(matchStats).forEach(p => {
+                gameUsGoals += matchStats[p].goals;
+                gameUsShots += matchStats[p].shots;
+            });
+            let gameUsPct = gameUsShots > 0 ? Math.round((gameUsGoals/gameUsShots)*100) : 0;
+            
+            csvContent += `\n"${gameName} vs ${oppName}"\n`;
+            csvContent += `Team Performance,${gameUsGoals} Goals,${gameUsShots} Shots,${gameUsPct}%\n`;
+            csvContent += `Opponent Performance,${gameOppGoals} Goals,${gameOppShots} Shots,${gameOppPct}%\n`;
+            
+            const playerKeys = Object.keys(matchStats);
+            if (playerKeys.length > 0) {
+                csvContent += `Player,Goals,Shots,Accuracy\n`;
+                playerKeys.forEach(p => {
+                    let s = matchStats[p];
+                    let pct = s.shots > 0 ? Math.round((s.goals/s.shots)*100) : 0;
+                    csvContent += `"${p}",${s.goals},${s.shots},${pct}%\n`;
+                });
+            } else {
+                csvContent += `No player stats recorded for this game.\n`;
+            }
+        });
+
+        csvContent += `\n\n--- PLAY-BY-PLAY ---\n`;
         csvContent += "Game,Quarter,Team,Player,Role,Action,Us Score,Opp Score\n";
 
         activeHistory.forEach((m, idx) => {
@@ -1858,7 +2111,14 @@
     }
 
     function resetLiveGame() {
-        currentGame = { gameNumber: "", ourTeam: savedOurTeamName, opponent: "", currentQuarter: 1, matchTotalScore: 0, opponentTotalScore: 0, quartersData: [], liveGs: { goals: 0, misses: 0 }, liveGa: { goals: 0, misses: 0 }, liveOpponent: { goals: 0, misses: 0 }, gsPlayer: "", gaPlayer: "", runningGameTotals: {}, runningOppTotals: { goals: 0, shots: 0 }, log: [], shotHistory: [], oppShotHistory: [], playByPlay: [], matchTimestamp: null };
+        currentGame = { 
+            gameNumber: "", ourTeam: savedOurTeamName, opponent: "", currentQuarter: 1, 
+            matchTotalScore: 0, opponentTotalScore: 0, quartersData: [], 
+            liveGs: { goals: 0, misses: 0 }, liveGa: { goals: 0, misses: 0 }, liveOpponent: { goals: 0, misses: 0 }, 
+            gsPlayer: "", gaPlayer: "", runningGameTotals: {}, runningOppTotals: { goals: 0, shots: 0 }, 
+            log: [], shotHistory: [], oppShotHistory: [], playByPlay: [], matchTimestamp: null, 
+            isDirty: false, originalQuarterBackup: null, isEditMode: false, loadedPastGame: false 
+        };
         document.getElementById('opponent-name').value = ""; document.getElementById('display-opp').innerText = "???"; document.getElementById('opp-card-title').innerHTML = `<strong>Opponent</strong>`;
         clearDropdownSelectors(); currentGame.gsPlayer = "Unassigned"; currentGame.gaPlayer = "Unassigned"; document.getElementById('name-gs').innerText = "Unassigned"; document.getElementById('name-ga').innerText = "Unassigned";
         calculateCarnivalTotals(); updateLiveUI(); updateSetupStatsDisplay(); getNextGameNumber();
