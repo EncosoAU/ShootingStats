@@ -57,7 +57,12 @@
 
         /* Dropdown/Accordion Styles */
         details.card { padding: 0; overflow: hidden; }
-        details.card summary { padding: 15px; font-size: 1.17rem; font-weight: bold; color: #444; cursor: pointer; outline: none; user-select: none; list-style-position: inside; }
+        details.card summary { 
+            padding: 15px; font-size: 1.17rem; font-weight: bold; color: #444; cursor: pointer; outline: none; 
+            -webkit-user-select: none; /* Fix for Safari */
+            user-select: none; 
+            list-style-position: inside; 
+        }
         details.card summary::-webkit-details-marker { color: var(--primary); }
         .details-content { padding: 0 15px 15px 15px; }
 
@@ -76,6 +81,7 @@
         
         .score-banner {
             background: rgba(240, 244, 248, 0.95);
+            -webkit-backdrop-filter: blur(8px); /* Fix for Safari */
             backdrop-filter: blur(8px);
             color: #1e293b;
             padding: 15px;
@@ -216,11 +222,11 @@
         <h1 style="margin-bottom: 10px; font-size: 2.2rem;">Netball Tracker</h1>
         <p style="color: #64748b; margin-bottom: 25px; font-size: 0.95rem;">Select your configuration to begin.</p>
         
-        <button class="btn" id="btn-fetch-cloud-meta" onclick="fetchCarnivalsAndTeams()" style="background-color: #0ea5e9; width:100%; margin-bottom: 25px; padding: 12px;">☁️ Fetch Cloud Carnivals</button>
+        <button class="btn" id="btn-fetch-cloud-meta" onclick="fetchCarnivalsAndTeams()" style="background-color: #0ea5e9; width:100%; margin-bottom: 25px; padding: 12px;">☁️ Fetch Cloud Carnivals / Teams</button>
         
         <div style="text-align: left; margin-bottom: 5px; font-weight: bold; color: #475569; font-size: 0.9rem;">1. Select Carnival</div>
         <div class="form-group responsive-stack" style="margin-bottom: 15px;">
-            <select id="carnival-select" onchange="handleCarnivalSelection()" style="background-color: #f8fafc;">
+            <select id="carnival-select" onchange="handleCarnivalSelection()" style="background-color: #f8fafc;" title="Select Carnival" aria-label="Select Carnival">
                 <option value="_default_">-- Select Carnival --</option>
                 <option value="_new_">+ Create New Carnival...</option>
             </select>
@@ -229,7 +235,7 @@
         
         <div style="text-align: left; margin-bottom: 5px; font-weight: bold; color: #475569; font-size: 0.9rem;">2. Select Team</div>
         <div class="form-group responsive-stack" style="margin-bottom: 30px;">
-            <select id="team-select" onchange="handleTeamSelection()" style="background-color: #f8fafc;">
+            <select id="team-select" onchange="handleTeamSelection()" style="background-color: #f8fafc;" title="Select Team" aria-label="Select Team">
                 <option value="_default_">-- Select Our Team --</option>
                 <option value="_new_">+ Create New Team...</option>
             </select>
@@ -267,7 +273,7 @@
         </div>
         
         <div class="form-group responsive-stack">
-            <select id="opponent-select" onchange="handleOpponentSelection()" style="background-color: #f8fafc;">
+            <select id="opponent-select" onchange="handleOpponentSelection()" style="background-color: #f8fafc;" title="Select Opponent" aria-label="Select Opponent">
                 <option value="_default_">-- Select Opponent --</option>
                 <option value="_new_">+ Add New Opponent...</option>
             </select>
@@ -535,7 +541,7 @@
 </div>
 
 <script>
-    const GOOGLE_SHEETS_URL = "https://script.google.com/macros/s/AKfycbzlz-gdeC4iotgfj-Nz1du-90-qLUBEZbMLhmyHWobB3t6Qz-6YPEP2iB89g3T0fhgMbg/exec";
+    const GOOGLE_SHEETS_URL = "https://script.google.com/macros/s/AKfycbyYlaMBB5IBHI0GJ_GaXU9Mwgl6h35ZdTUsGKdMo__59k6ZpoiB4DdNjJ3j1qgoNFx-UQ/exec";
 
     let carnivalHistory = JSON.parse(localStorage.getItem('netball_history')) || [];
     let allTeamHistory = [];
@@ -652,7 +658,7 @@
         });
     }
 
-    // --- DRY Cloud Parsing Function ---
+    // --- HIGH PERFORMANCE: O(N) Map-based Parser ---
     function processCloudRowsToMatches(rows) {
         let matchesMap = {};
         let tempRosters = {};
@@ -661,7 +667,8 @@
 
         if (!Array.isArray(rows)) return { matchesMap, tempRosters, uniqueCarnivals, uniqueTeams };
 
-        rows.forEach(row => {
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i];
             const rowCarnival = String(row[13] || "Netball Carnival Tracker").trim();
             const teamName = String(row[1] || "Our Team").trim();
             const player = row[6];
@@ -681,7 +688,7 @@
             }
 
             const qNumRaw = String(row[3]);
-            if (!matchId || matchId === "Roster_Update" || matchId === "Roster_Delete" || qNumRaw === "Roster") return;
+            if (!matchId || matchId === "Roster_Update" || matchId === "Roster_Delete" || qNumRaw === "Roster") continue;
 
             const opponentName = String(row[2] || "Opponent").trim(), qNum = parseInt(qNumRaw);
             const pos = row[7], goals = parseInt(row[8]) || 0, misses = parseInt(row[9]) || 0, oppGoals = parseInt(row[5]) || 0, rowTimestamp = row[12] || null;
@@ -695,45 +702,48 @@
             else if (pos === "GA") { qObj.gaName = player; qObj.gaGoals += goals; qObj.gaMisses += misses; }
 
             qObj.playByPlay = []; qObj.shotHistory = []; qObj.oppShotHistory = [];
-        });
+        }
 
         return { matchesMap, tempRosters, uniqueCarnivals, uniqueTeams };
     }
 
+    // --- HIGH PERFORMANCE: O(N) Map-based Deduplicator ---
     function getLatestRows(rows) {
         if (!Array.isArray(rows)) return [];
-        let latestTimestamps = {};
-        
-        rows.forEach(row => {
-            const cName = String(row[13] || "").trim();
-            const tName = String(row[1] || "").trim();
-            const gNum = String(row[0] || "").trim();
-            const qNum = String(row[3] || "").trim(); 
-            
-            if (!gNum || gNum === "Roster_Update" || gNum === "Roster_Delete") return; 
-            
-            const gameKey = `${cName}::${tName}::${gNum}::${qNum}`;
-            const ts = parseInt(row[14]) || 0; 
-            
-            if (!(gameKey in latestTimestamps) || ts > latestTimestamps[gameKey]) latestTimestamps[gameKey] = ts;
-        });
-        
-        return rows.filter(row => {
+        let latestRowsMap = new Map();
+
+        for (let i = 0; i < rows.length; i++) {
+            let row = rows[i];
             const cName = String(row[13] || "").trim();
             const tName = String(row[1] || "").trim();
             const gNum = String(row[0] || "").trim();
             const qNum = String(row[3] || "").trim();
-            
-            if (!gNum) return false;
-            if (gNum === "Roster_Update" || gNum === "Roster_Delete") return true;
-            
-            return (parseInt(row[14]) || 0) === latestTimestamps[`${cName}::${tName}::${gNum}::${qNum}`];
-        });
+            const playerName = String(row[6] || "").trim();
+
+            // Roster updates aren't tied to a quarter, retain all of them using index to ensure uniqueness
+            if (!gNum || gNum === "Roster_Update" || gNum === "Roster_Delete") {
+                latestRowsMap.set(`NON_GAME_${i}`, row);
+                continue;
+            }
+
+            const gameKey = `${cName}::${tName}::${gNum}::${qNum}::${playerName}`;
+            const ts = parseInt(row[14]) || 0;
+
+            const existing = latestRowsMap.get(gameKey);
+            if (!existing || ts > (parseInt(existing[14]) || 0)) {
+                latestRowsMap.set(gameKey, row);
+            }
+        }
+        
+        return Array.from(latestRowsMap.values());
     }
 
     async function fetchCarnivalsAndTeams() {
         const btn = document.getElementById('btn-fetch-cloud-meta'), originalText = btn.innerText;
         btn.innerText = "⏳ Fetching..."; btn.disabled = true;
+
+        // Yield to allow UI to paint "Fetching..."
+        await new Promise(resolve => setTimeout(resolve, 50));
 
         let userToken = localStorage.getItem('netball_security_token');
         if (!userToken) { userToken = prompt("🔑 Enter Security Token:"); localStorage.setItem('netball_security_token', userToken || ""); }
@@ -744,6 +754,8 @@
             const resultText = await response.text();
             if (resultText === "Unauthorized") { alert("❌ Invalid Security Token."); localStorage.removeItem('netball_security_token'); return; }
             
+            await new Promise(resolve => setTimeout(resolve, 10)); // Unblock main thread
+            
             let rawRows;
             try { rawRows = JSON.parse(resultText); } catch(e) { console.error("Invalid JSON from Cloud"); alert("Cloud Error. Try again later."); return; }
             
@@ -752,18 +764,32 @@
             
             const { tempRosters, uniqueCarnivals, uniqueTeams } = processCloudRowsToMatches(rows);
             
-            // Non-destructive roster merge
             Object.keys(tempRosters).forEach(k => { rosters[k] = tempRosters[k]; });
             localStorage.setItem('netball_rosters', JSON.stringify(rosters));
 
-            const carnSel = document.getElementById('carnival-select'), teamSel = document.getElementById('team-select');
-            let carnHtml = `<option value="_default_">-- Select Carnival --</option><option value="_new_">+ Create New Carnival...</option>`;
-            uniqueCarnivals.forEach(c => carnHtml += `<option value="${c}">${c}</option>`);
-            carnSel.innerHTML = carnHtml; setupDropdownInitialState('carnival-select', 'carnival-name-input', carnivalName, "");
+            // High Performance Fragment rendering for Dropdowns
+            const carnSel = document.getElementById('carnival-select');
+            carnSel.innerHTML = `<option value="_default_">-- Select Carnival --</option><option value="_new_">+ Create New Carnival...</option>`;
+            let carnFrag = document.createDocumentFragment();
+            uniqueCarnivals.forEach(c => {
+                let opt = document.createElement('option');
+                opt.value = c; opt.textContent = c;
+                carnFrag.appendChild(opt);
+            });
+            carnSel.appendChild(carnFrag);
+            setupDropdownInitialState('carnival-select', 'carnival-name-input', carnivalName, "");
 
-            let teamHtml = `<option value="_default_">-- Select Our Team --</option><option value="_new_">+ Create New Team...</option>`;
-            uniqueTeams.forEach(t => teamHtml += `<option value="${t}">${t}</option>`);
-            teamSel.innerHTML = teamHtml; setupDropdownInitialState('team-select', 'our-team-name', savedOurTeamName, "");
+            const teamSel = document.getElementById('team-select');
+            teamSel.innerHTML = `<option value="_default_">-- Select Our Team --</option><option value="_new_">+ Create New Team...</option>`;
+            let teamFrag = document.createDocumentFragment();
+            uniqueTeams.forEach(t => {
+                let opt = document.createElement('option');
+                opt.value = t; opt.textContent = t;
+                teamFrag.appendChild(opt);
+            });
+            teamSel.appendChild(teamFrag);
+            setupDropdownInitialState('team-select', 'our-team-name', savedOurTeamName, "");
+
         } catch (err) { alert("⚠️ Failed to fetch from Cloud."); } finally { btn.innerText = originalText; btn.disabled = false; }
     }
 
@@ -780,6 +806,8 @@
             const resultText = await response.text();
             if (resultText === "Unauthorized") { alert("❌ Invalid Token. Starting fresh local instance."); localStorage.removeItem('netball_security_token'); return; }
             
+            await new Promise(resolve => setTimeout(resolve, 10)); // Unblock UI thread
+            
             let rawRows;
             try { rawRows = JSON.parse(resultText); } catch(e) { console.error("Invalid JSON during specific sync"); return; }
             if (!Array.isArray(rawRows)) return;
@@ -790,11 +818,9 @@
 
             const { matchesMap, tempRosters } = processCloudRowsToMatches(rows);
 
-            // Roster Merge
             Object.keys(tempRosters).forEach(k => { rosters[k] = tempRosters[k]; });
             localStorage.setItem('netball_rosters', JSON.stringify(rosters));
 
-            // Format cloud matches array
             let cloudMatches = [];
             Object.keys(matchesMap).forEach(key => {
                 const mData = matchesMap[key]; 
@@ -809,27 +835,72 @@
                 });
             });
 
-            // Non-Destructive Data Merge
+            // HIGH PERFORMANCE: O(1) Non-Destructive Data Merge
+            let localMap = new Map(carnivalHistory.map(m => [`${m.carnivalName}::${m.ourTeam}::${m.gameNumber}`, m]));
+            let cloudMap = new Map(cloudMatches.filter(m => m.carnivalName === targetCarnival).map(m => [`${m.carnivalName}::${m.ourTeam}::${m.gameNumber}`, m]));
+            
             let newCarnivalHistory = [];
-            let allKeys = new Set([...carnivalHistory.map(m => `${m.carnivalName}::${m.ourTeam}::${m.gameNumber}`), ...cloudMatches.filter(m => m.carnivalName === targetCarnival).map(m => `${m.carnivalName}::${m.ourTeam}::${m.gameNumber}`)]);
+            let allKeys = new Set([...localMap.keys(), ...cloudMap.keys()]);
 
             allKeys.forEach(k => {
-                let localM = carnivalHistory.find(m => `${m.carnivalName}::${m.ourTeam}::${m.gameNumber}` === k);
-                let cloudM = cloudMatches.find(m => `${m.carnivalName}::${m.ourTeam}::${m.gameNumber}` === k);
+                let localM = localMap.get(k);
+                let cloudM = cloudMap.get(k);
 
-                // If local has it and it's NOT synced yet, protect the local copy. Otherwise take cloud truth.
                 if (localM && localM.isSynced === false) { newCarnivalHistory.push(localM); } 
                 else if (cloudM) { newCarnivalHistory.push(cloudM); } 
                 else if (localM) { newCarnivalHistory.push(localM); }
             });
 
             carnivalHistory = newCarnivalHistory;
-            allTeamHistory = cloudMatches; // In-memory reference for other features
+            allTeamHistory = cloudMatches; 
             
             sortCarnivalHistory(); 
             localStorage.setItem('netball_history', JSON.stringify(carnivalHistory));
 
         } catch (err) { console.error("Cloud fetch failed", err); }
+    }
+
+    async function confirmStartSelection() {
+        const selCarnival = document.getElementById('carnival-select').value === '_new_' ? document.getElementById('carnival-name-input').value.trim() : document.getElementById('carnival-select').value;
+        const selTeam = document.getElementById('team-select').value === '_new_' ? document.getElementById('our-team-name').value.trim() : document.getElementById('team-select').value;
+
+        if (!selCarnival || selCarnival === '_default_') { alert("Please select or enter a Carnival."); return; }
+        if (!selTeam || selTeam === '_default_') { alert("Please select or enter a Team."); return; }
+
+        const btn = document.getElementById('btn-confirm-start');
+        btn.innerText = "⏳ Loading Data..."; btn.disabled = true;
+
+        carnivalName = selCarnival; savedOurTeamName = selTeam;
+        localStorage.setItem('netball_carnival_name', carnivalName); localStorage.setItem('netball_our_team_name', savedOurTeamName);
+
+        // Explicitly yield to the browser so the "Loading Data..." text paints
+        await new Promise(resolve => setTimeout(resolve, 50));
+
+        await syncSpecificData(carnivalName, savedOurTeamName);
+
+        refreshDynamicHeaders(); 
+        currentGame.ourTeam = savedOurTeamName; 
+
+        // Batch UI computations
+        requestAnimationFrame(() => {
+            loadCurrentRoster(); 
+            populateOpponentDropdown();
+            setupDropdownInitialState('opponent-select', 'opponent-name-input', "", ""); 
+            renderHistory(); 
+            calculateCarnivalTotals(); 
+            getNextGameNumber(); 
+            updateSetupStatsDisplay();
+            updateLiveUI(); 
+            
+            document.getElementById('start-page').style.display = 'none'; 
+            document.getElementById('main-app').style.display = 'block'; 
+            window.scrollTo({ top: 0 });
+
+            btn.innerText = "✅ Confirm & Load Data"; btn.disabled = false;
+            
+            startAutoSave(); 
+            checkDraftOnLoad();
+        });
     }
 
     async function pushRosterToCloud(playerName, action = "Roster_Update") {
@@ -880,32 +951,63 @@
     async function syncPendingGames() {
         const syncBtn = document.getElementById('btn-sync-pending');
         const ogText = syncBtn.innerText;
-        syncBtn.innerText = "🔄 Pushing Data..."; syncBtn.disabled = true;
+        syncBtn.innerText = "🔄 Pushing Data..."; 
+        syncBtn.disabled = true;
 
         let userToken = localStorage.getItem('netball_security_token');
-        if (!userToken) { userToken = prompt("🔑 Enter Security Token to sync pending games:"); localStorage.setItem('netball_security_token', userToken || ""); }
-        if (!userToken) { syncBtn.innerText = ogText; syncBtn.disabled = false; return; }
+        if (!userToken) { 
+            userToken = prompt("🔑 Enter Security Token to sync pending games:"); 
+            localStorage.setItem('netball_security_token', userToken || ""); 
+        }
+        if (!userToken) { 
+            syncBtn.innerText = ogText; 
+            syncBtn.disabled = false; 
+            return; 
+        }
 
-        let successCount = 0, failCount = 0;
+        let successCount = 0;
+        let failCount = 0;
         
+        // Arrays to hold our parallel promises and track their original indices
+        let syncPromises = [];
+        let syncIndices = [];
+
         for (let i = 0; i < carnivalHistory.length; i++) {
             if (carnivalHistory[i].isSynced === false) {
-                const success = await autoPushToGoogleSheets(carnivalHistory[i]);
-                if (success) { carnivalHistory[i].isSynced = true; successCount++; } 
-                else failCount++;
+                syncPromises.push(autoPushToGoogleSheets(carnivalHistory[i]));
+                syncIndices.push(i);
             }
+        }
+
+        // Execute all network requests simultaneously
+        if (syncPromises.length > 0) {
+            const results = await Promise.all(syncPromises);
+            
+            results.forEach((success, index) => {
+                if (success) {
+                    carnivalHistory[syncIndices[index]].isSynced = true;
+                    successCount++;
+                } else {
+                    failCount++;
+                }
+            });
         }
         
         localStorage.setItem('netball_history', JSON.stringify(carnivalHistory));
         renderHistory();
         
-        syncBtn.innerText = ogText; syncBtn.disabled = false;
-        if (successCount > 0 && failCount === 0) alert(`✅ Successfully synced ${successCount} offline games to the cloud!`);
-        else if (failCount > 0) alert(`⚠️ Synced ${successCount} games, but ${failCount} failed. Check your connection.`);
-        else alert("Everything is already up to date!");
+        syncBtn.innerText = ogText; 
+        syncBtn.disabled = false;
+        
+        if (successCount > 0 && failCount === 0) {
+            alert(`✅ Successfully synced ${successCount} offline games to the cloud!`);
+        } else if (failCount > 0) {
+            alert(`⚠️ Synced ${successCount} games, but ${failCount} failed. Check your connection.`);
+        } else {
+            alert("Everything is already up to date!");
+        }
     }
 
-    // --- Decoupled Game Numbering ---
     function getNextGameNumber() {
         const localActive = getActiveHistory();
         let nextNum = localActive.length + 1;
@@ -936,30 +1038,6 @@
 
     function goToStatsPage() { document.getElementById('main-app').style.display = 'none'; document.getElementById('stats-page').style.display = 'block'; window.scrollTo({ top: 0, behavior: 'smooth' }); renderStatistics(); }
     function goBackToMainFromStats() { document.getElementById('stats-page').style.display = 'none'; document.getElementById('main-app').style.display = 'block'; window.scrollTo({ top: 0, behavior: 'smooth' }); }
-
-    async function confirmStartSelection() {
-        const selCarnival = document.getElementById('carnival-select').value === '_new_' ? document.getElementById('carnival-name-input').value.trim() : document.getElementById('carnival-select').value;
-        const selTeam = document.getElementById('team-select').value === '_new_' ? document.getElementById('our-team-name').value.trim() : document.getElementById('team-select').value;
-
-        if (!selCarnival || selCarnival === '_default_') { alert("Please select or enter a Carnival."); return; }
-        if (!selTeam || selTeam === '_default_') { alert("Please select or enter a Team."); return; }
-
-        const btn = document.getElementById('btn-confirm-start');
-        btn.innerText = "⏳ Loading Data..."; btn.disabled = true;
-        
-        carnivalName = selCarnival; savedOurTeamName = selTeam;
-        localStorage.setItem('netball_carnival_name', carnivalName); localStorage.setItem('netball_our_team_name', savedOurTeamName);
-
-        await syncSpecificData(carnivalName, savedOurTeamName);
-
-        refreshDynamicHeaders(); currentGame.ourTeam = savedOurTeamName; loadCurrentRoster(); renderHistory(); calculateCarnivalTotals(); getNextGameNumber(); populateOpponentDropdown();
-        setupDropdownInitialState('opponent-select', 'opponent-name-input', "", ""); updateLiveUI(); updateSetupStatsDisplay();
-        
-        document.getElementById('start-page').style.display = 'none'; document.getElementById('main-app').style.display = 'block'; window.scrollTo({ top: 0 });
-        btn.innerText = "✅ Confirm & Load Data"; btn.disabled = false;
-        
-        startAutoSave(); checkDraftOnLoad();
-    }
 
     function populateOpponentDropdown() {
         let uniqueOpponents = new Set();
@@ -1590,7 +1668,6 @@
                 localStorage.setItem('netball_history', JSON.stringify(carnivalHistory)); // Re-save with updated flag
                 renderHistory(); // Re-render to clear badge if successful
             } else {
-                // If it's an edited game, we treat it as unsynced until they manually push it later (or logic dictates)
                 matchData.isSynced = false;
                 localStorage.setItem('netball_history', JSON.stringify(carnivalHistory));
                 renderHistory();
@@ -1637,6 +1714,8 @@
                 const url = `${GOOGLE_SHEETS_URL}?token=${encodeURIComponent(userToken)}&fetchType=pbp&carnival=${encodeURIComponent(matchToEdit.carnivalName)}&team=${encodeURIComponent(matchToEdit.ourTeam)}&gameNumber=${encodeURIComponent(matchToEdit.gameNumber)}`;
                 const response = await fetch(url);
                 const resultText = await response.text();
+                
+                await new Promise(resolve => setTimeout(resolve, 10)); // Unblock UI
                 
                 if (resultText !== "Unauthorized") {
                     let rawRows;
@@ -1761,6 +1840,9 @@
             const url = `${GOOGLE_SHEETS_URL}?token=${encodeURIComponent(userToken)}&fetchType=pbp&carnival=${encodeURIComponent(match.carnivalName)}&team=${encodeURIComponent(match.ourTeam)}&gameNumber=${encodeURIComponent(match.gameNumber)}`;
             const response = await fetch(url);
             const resultText = await response.text();
+            
+            await new Promise(resolve => setTimeout(resolve, 10)); // Unblock UI
+            
             if (resultText !== "Unauthorized") {
                 let rawRows;
                 try { rawRows = JSON.parse(resultText); } catch(e) {}
@@ -1865,12 +1947,18 @@
         exportBtn.innerText = "⏳ Fetching Data..."; exportBtn.disabled = true;
         document.body.style.cursor = 'wait';
 
+        // Unblock UI so 'Fetching Data' renders
+        await new Promise(resolve => setTimeout(resolve, 20));
+
         let userToken = localStorage.getItem('netball_security_token');
         if(userToken) {
             try {
                 const url = `${GOOGLE_SHEETS_URL}?token=${encodeURIComponent(userToken)}&fetchType=pbp&carnival=${encodeURIComponent(carnivalName)}&team=${encodeURIComponent(savedOurTeamName)}`;
                 const response = await fetch(url);
                 const resultText = await response.text();
+                
+                await new Promise(resolve => setTimeout(resolve, 20)); // Unblock before massive parse
+                
                 if (resultText !== "Unauthorized") {
                     let rawRows;
                     try { rawRows = JSON.parse(resultText); } catch(e) {}
