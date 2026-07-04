@@ -37,7 +37,7 @@
         
         /* Edit Mode Styles */
         body.edit-mode-active {
-            background-color: #fffbeb !important; /* Light amber/yellow */
+            background-color: #fffbeb !important; 
         }
         body.edit-mode-active .card {
             border: 1px solid #fde68a;
@@ -59,7 +59,7 @@
         details.card { padding: 0; overflow: hidden; }
         details.card summary { 
             padding: 15px; font-size: 1.17rem; font-weight: bold; color: #444; cursor: pointer; outline: none; 
-            -webkit-user-select: none; /* Fix for Safari */
+            -webkit-user-select: none; 
             user-select: none; 
             list-style-position: inside; 
         }
@@ -81,7 +81,7 @@
         
         .score-banner {
             background: rgba(240, 244, 248, 0.95);
-            -webkit-backdrop-filter: blur(8px); /* Fix for Safari */
+            -webkit-backdrop-filter: blur(8px);
             backdrop-filter: blur(8px);
             color: #1e293b;
             padding: 15px;
@@ -93,7 +93,6 @@
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
         
-        /* Compact Mode applied on scroll */
         .score-banner.compact {
             position: fixed; top: 0; left: 50%; transform: translateX(-50%);
             width: 100%; max-width: 650px; z-index: 1000;
@@ -114,40 +113,44 @@
 
         .q-banner { margin-bottom: 5px; font-size: 0.95rem; display: flex; justify-content: center; align-items: center; width: 100%; }
 
-        /* Translucent Dropdown Button */
         details.score-dropdown { background: rgba(255, 255, 255, 0.6); border: 1px solid rgba(30, 41, 59, 0.12); border-radius: 6px; margin-bottom: 10px; overflow: hidden; }
         details.score-dropdown summary { padding: 8px; font-size: 0.95rem; font-weight: bold; color: #1e293b; text-align: center; cursor: pointer; list-style: none; }
         details.score-dropdown summary::-webkit-details-marker { display: none; }
         details.score-dropdown[open] summary { border-bottom: 1px dashed rgba(30, 41, 59, 0.2); margin-bottom: 8px; }
 
-        .live-grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px; }
-        .full-width-box { grid-column: span 2; }
-
-        .shooter-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; text-align: center; }
+        /* Shooter/Opponent Cards Layout */
+        .shooter-card {
+            display: flex;
+            align-items: stretch;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+        .shooter-card .btn-goal { flex: 1; background-color: var(--success); color: white; border: none; font-weight: 900; font-size: 1.15rem; cursor: pointer; }
+        .shooter-card .btn-miss { flex: 1; background-color: var(--danger); color: white; border: none; font-weight: 900; font-size: 1.15rem; cursor: pointer; }
+        .shooter-card .shooter-data { flex: 2; padding: 12px 5px; text-align: center; display: flex; flex-direction: column; justify-content: center; }
+        .shooter-card.opp-card { background: var(--opp-bg); border: 2px solid var(--opp-border); }
+        .shooter-card.opp-card .shooter-data { color: var(--opp-text); }
+        
         .role-title { font-weight: bold; font-size: 1.1rem; color: var(--primary); }
         .stat-pct { font-size: 1.8rem; font-weight: bold; margin: 5px 0; }
         .stat-raw { font-size: 0.85rem; color: #333; font-weight: 500; margin-bottom: 3px; line-height: 1.3; }
-        .stat-carnival-line { font-size: 0.8rem; color: #64748b; font-weight: 500; margin-bottom: 10px; }
+        .stat-carnival-line { font-size: 0.8rem; color: #64748b; font-weight: 500; }
 
-        .btn-shot-group { display: flex; gap: 8px; margin-bottom: 5px; }
-        .btn-goal { background-color: var(--success); flex: 1; padding: 20px 10px; font-size: 1.15rem; font-weight: 900; letter-spacing: 1px; border-radius: 8px;}
-        .btn-miss { background-color: var(--danger); flex: 1; padding: 20px 10px; font-size: 1.15rem; font-weight: 900; letter-spacing: 1px; border-radius: 8px;}
-        .btn-undo { background-color: var(--neutral-dark); width: 100%; padding: 12px; font-size: 1rem; border-radius: 6px; font-weight: bold; color: white; border: none; cursor: pointer; }
+        .btn-undo { background-color: var(--neutral-dark); padding: 12px; font-size: 1rem; border-radius: 6px; font-weight: bold; color: white; border: none; cursor: pointer; width: 100%; margin-bottom: 10px; }
+        .btn-quarter { background-color: rgba(237, 108, 2, 0.2); color: #c2410c; border: 1px solid #fed7aa; padding: 12px; font-size: 1rem; font-weight: bold; border-radius: 6px; cursor: pointer; width: 100%; margin-bottom: 10px; }
+        .btn-save { background-color: #0284c7; color: white; padding: 12px; font-size: 1rem; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; width: 100%; margin-bottom: 10px; }
+        
+        .btn-reset-q { background-color: rgba(225, 29, 72, 0.1); border: 1px solid #fda4af; color: #e11d48; flex: 1; padding: 11px; font-size: 0.9rem; font-weight: bold; border-radius: 6px; cursor: pointer; }
+        .btn-reset-game { background-color: rgba(225, 29, 72, 0.1); border: 1px solid #fda4af; color: #e11d48; flex: 1; padding: 11px; font-size: 0.9rem; font-weight: bold; border-radius: 6px; cursor: pointer; }
 
-        @keyframes popFlashGreen { 0% { background-color: var(--success); transform: scale(1); } 40% { background-color: #4caf50; transform: scale(1.08); box-shadow: 0 0 15px rgba(76, 175, 80, 0.6); } 100% { background-color: var(--success); transform: scale(1); } }
-        @keyframes popFlashRed { 0% { background-color: var(--danger); transform: scale(1); } 40% { background-color: #ef5350; transform: scale(1.08); box-shadow: 0 0 15px rgba(239, 83, 80, 0.6); } 100% { background-color: var(--danger); transform: scale(1); } }
+        @keyframes popFlashGreen { 0% { background-color: var(--success); transform: scale(1); } 40% { background-color: #4caf50; transform: scale(1.05); } 100% { background-color: var(--success); transform: scale(1); } }
+        @keyframes popFlashRed { 0% { background-color: var(--danger); transform: scale(1); } 40% { background-color: #ef5350; transform: scale(1.05); } 100% { background-color: var(--danger); transform: scale(1); } }
         .flash-green-anim { animation: popFlashGreen 0.35s ease-out; }
         .flash-red-anim { animation: popFlashRed 0.35s ease-out; }
-
-        .q-controls { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; }
-        .q-controls button { font-size: 1rem; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; }
-        .btn-quarter { background-color: rgba(237, 108, 2, 0.2) !important; color: #c2410c !important; border: 1px solid #fed7aa !important; flex: 2; width: 100%; padding: 12px; }
-        .btn-reset-q { background-color: rgba(225, 29, 72, 0.1) !important; border: 1px solid #fda4af !important; color: #e11d48 !important; flex: 1; width: 100%; padding: 11px !important; font-size: 0.9rem !important; font-weight: bold !important; }
-
-        .game-controls { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
-        .game-controls button { font-size: 1rem; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; }
-        .btn-save { background-color: #0284c7; color: white; flex: 2; width: 100%; padding: 12px; }
-        .btn-reset-game { background-color: rgba(225, 29, 72, 0.1) !important; border: 1px solid #fda4af !important; color: #e11d48 !important; flex: 1; width: 100%; padding: 11px !important; font-size: 0.9rem !important; font-weight: bold !important; }
 
         .log-box { max-height: 180px; overflow-y: auto; background: #fafafa; border: 1px solid #eee; padding: 10px; border-radius: 6px; font-size: 0.85rem; line-height: 1.5; }
 
@@ -194,22 +197,22 @@
         
         .sync-badge { position: absolute; top: -10px; right: -5px; background: var(--danger); color: white; padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
 
+        /* Loader Animation */
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
         @media (max-width: 650px) {
             .score-banner.compact { border-radius: 0; border-left: none; border-right: none; }
         }
         @media (max-width: 480px) {
             .setup-stats-grid { grid-template-columns: 1fr !important; }
             .history-actions { flex-direction: column; }
-            .q-controls, .game-controls { flex-direction: column; }
             .form-group.responsive-stack { flex-direction: column; gap: 5px; }
-            .live-grid-container { grid-template-columns: 1fr 1fr !important; gap: 8px; }
-            .full-width-mobile { grid-column: span 2 !important; }
-            .shooter-box { padding: 8px 6px; }
-            .btn-goal, .btn-miss { padding: 12px 2px; font-size: 0.95rem; }
-            .stat-pct { font-size: 1.4rem; margin: 2px 0; }
+            .shooter-card { flex-direction: row; }
+            .shooter-card .btn-goal, .shooter-card .btn-miss { font-size: 1rem; }
+            .stat-pct { font-size: 1.5rem; margin: 2px 0; }
             .stat-raw { font-size: 0.75rem; }
             .role-title { font-size: 1rem; }
-            .stat-carnival-line { font-size: 0.75rem; margin-bottom: 6px; }
+            .stat-carnival-line { font-size: 0.75rem; }
             .score-banner { padding: 10px; font-size: 1rem; }
             .sticky-score-wrapper { margin-bottom: 8px; }
         }
@@ -219,7 +222,7 @@
 
 <div id="start-page" class="container" style="max-width: 450px; margin-top: 40px;">
     <div class="card" style="text-align: center; padding: 30px 20px;">
-        <h1 style="margin-bottom: 10px; font-size: 2.2rem;">Netball Shooting Stats</h1>
+        <h1 style="margin-bottom: 10px; font-size: 2.2rem;">Netball Tracker</h1>
         <p style="color: #64748b; margin-bottom: 25px; font-size: 0.95rem;">Select your configuration to begin.</p>
         
         <button class="btn" id="btn-fetch-cloud-meta" onclick="fetchCarnivalsAndTeams()" style="background-color: #0ea5e9; width:100%; margin-bottom: 25px; padding: 12px;">☁️ Fetch Cloud Carnivals / Teams</button>
@@ -248,7 +251,7 @@
 
 <div id="main-app" class="container" style="display: none;">
     <header style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; padding: 0 5px;">
-        <h1 id="carnival-title-display" style="text-align: center; margin: 0; line-height: 1.2;">Netball Shooting Stats</h1>
+        <h1 id="carnival-title-display" style="text-align: center; margin: 0; line-height: 1.2;">Netball Tracker</h1>
         <div style="display: flex; gap: 8px; width: 100%;">
             <button class="btn-nav btn-nav-stats" onclick="goToStatsPage()">📊 View Statistics</button>
             <button class="btn-nav btn-nav-change" onclick="goBackToStart()">🔄 Change Team</button>
@@ -342,52 +345,53 @@
     </div>
 
     <div class="card">
-        <div class="live-grid-container">
-            <div class="shooter-box">
-                <div class="role-title">GA: <span id="name-ga">Unassigned</span></div>
-                <div class="stat-pct" id="pct-ga">0%</div>
-                <div class="stat-raw" id="raw-ga">Quarter: 0/0 (0%)<br>Game: 0/0 (0%)</div>
-                <div class="stat-carnival-line" id="carn-ga-line">Carnival Overall: 0%</div>
-                <div class="btn-shot-group">
-                    <button class="btn btn-goal" onclick="recordShot('ga', true, this)">GOAL</button>
-                    <button class="btn btn-miss" onclick="recordShot('ga', false, this)">MISS</button>
+        
+        <div id="live-cards-container">
+            <div class="shooter-card">
+                <button class="btn-goal" onclick="recordShot('ga', true, this)">GOAL</button>
+                <div class="shooter-data">
+                    <div class="role-title">GA: <span id="name-ga">Unassigned</span></div>
+                    <div class="stat-pct" id="pct-ga">0%</div>
+                    <div class="stat-raw" id="raw-ga">Quarter: 0/0 (0%)<br>Game: 0/0 (0%)</div>
+                    <div class="stat-carnival-line" id="carn-ga-line">Carnival Overall: 0%</div>
                 </div>
+                <button class="btn-miss" onclick="recordShot('ga', false, this)">MISS</button>
+            </div>
+            
+            <div class="shooter-card">
+                <button class="btn-goal" onclick="recordShot('gs', true, this)">GOAL</button>
+                <div class="shooter-data">
+                    <div class="role-title">GS: <span id="name-gs">Unassigned</span></div>
+                    <div class="stat-pct" id="pct-gs">0%</div>
+                    <div class="stat-raw" id="raw-gs">Quarter: 0/0 (0%)<br>Game: 0/0 (0%)</div>
+                    <div class="stat-carnival-line" id="carn-gs-line">Carnival Overall: 0%</div>
+                </div>
+                <button class="btn-miss" onclick="recordShot('gs', false, this)">MISS</button>
             </div>
 
-            <div class="shooter-box">
-                <div class="role-title">GS: <span id="name-gs">Unassigned</span></div>
-                <div class="stat-pct" id="pct-gs">0%</div>
-                <div class="stat-raw" id="raw-gs">Quarter: 0/0 (0%)<br>Game: 0/0 (0%)</div>
-                <div class="stat-carnival-line" id="carn-gs-line">Carnival Overall: 0%</div>
-                <div class="btn-shot-group">
-                    <button class="btn btn-goal" onclick="recordShot('gs', true, this)">GOAL</button>
-                    <button class="btn btn-miss" onclick="recordShot('gs', false, this)">MISS</button>
+            <div class="shooter-card opp-card">
+                <button class="btn-goal" onclick="recordOppShot(true, this)">OPP GOAL</button>
+                <div class="shooter-data">
+                    <div class="role-title" id="opp-card-title"><strong>Opponent</strong></div>
+                    <div class="stat-pct" id="pct-opp">0%</div>
+                    <div class="stat-raw" id="raw-opp">Quarter: 0/0 (0%)<br>Game: 0/0 (0%)</div>
+                    <div class="stat-carnival-line" style="display:none;" id="quarter-opp-label"></div>
                 </div>
+                <button class="btn-miss" onclick="recordOppShot(false, this)">OPP MISS</button>
             </div>
-
-            <div class="shooter-box full-width-box full-width-mobile" style="background: var(--opp-bg); border: 2px solid var(--opp-border); margin-top: 5px;">
-                <div class="role-title" id="opp-card-title" style="color: var(--opp-text);"><strong>Opponent</strong></div>
-                <div class="stat-pct" id="pct-opp" style="color: var(--opp-text);">0%</div>
-                <div class="stat-raw" id="raw-opp" style="color: var(--opp-text);">Quarter: 0/0 (0%)<br>Game: 0/0 (0%)</div>
-                <div class="stat-carnival-line" style="margin-bottom:10px; display:none;" id="quarter-opp-label"></div>
-                <div class="btn-shot-group">
-                    <button class="btn btn-goal" onclick="recordOppShot(true, this)">OPP GOAL</button>
-                    <button class="btn btn-miss" onclick="recordOppShot(false, this)">OPP MISS</button>
-                </div>
-            </div>
-
-            <button class="btn btn-undo full-width-box" onclick="undoLastAction()">↩️ Undo Last Action</button>
         </div>
 
-        <div class="q-controls" id="q-controls-container">
-            <button class="btn-quarter" id="quarter-btn" onclick="endQuarter()">⏱️ End Quarter 1</button>
+        <button class="btn-undo" onclick="undoLastAction()">↩️ Undo Last Action</button>
+        <button class="btn-quarter" id="quarter-btn" onclick="endQuarter()">⏱️ End Quarter 1</button>
+        <button class="btn-save" id="btn-master-save" onclick="saveGame()">🔒 Save & Finalise Game</button>
+        
+        <hr style="border: 0; border-top: 1px dashed #cbd5e1; margin: 15px 0;">
+        
+        <div style="display: flex; gap: 8px;">
             <button class="btn-reset-q" id="quarter-reset-btn" onclick="resetCurrentQuarter()">🗑️ Reset Quarter</button>
-        </div>
-
-        <div class="game-controls">
-            <button class="btn-save" id="btn-master-save" onclick="saveGame()">🔒 Save & Finalise Game</button>
             <button class="btn-reset-game" onclick="resetCurrentGame()">🗑️ Discard Game</button>
         </div>
+
     </div>
 
     <details class="card" style="border-left: 5px solid var(--warning);">
@@ -436,7 +440,7 @@
 
     <div style="position: relative;">
         <details class="card">
-            <summary id="history-log-summary">📂 Active Carnival History Log</summary>
+            <summary id="history-log-summary">History</summary>
             <div class="details-content">
                 <div class="history-actions" style="margin-top: 10px; margin-bottom: 15px;">
                     <button class="btn-row-share" id="btn-export-all" onclick="exportAllGamesCSV();">📥 Export All Games CSV</button>
@@ -448,7 +452,7 @@
     </div>
 
     <details class="card" style="border-left: 5px solid #8b5cf6;">
-        <summary id="prev-carnivals-summary">📂 Previous Carnivals Summary</summary>
+        <summary id="prev-carnivals-summary">Previous Carnivals</summary>
         <div class="details-content" id="previous-carnivals-container">
             <p style="color:#666; font-size:0.9rem; text-align: center; margin-top: 5px;">Fetch Existing Carnivals & Teams from the cloud to view historical records.</p>
         </div>
@@ -474,6 +478,14 @@
             <button class="btn-nav btn-nav-change" onclick="goBackToMainFromStats()">🔙 Back to Tracker</button>
         </div>
     </header>
+
+    <div class="card">
+        <h3>🏆 Match Results</h3>
+        <p style="font-size:0.85rem; color:#666; margin-top:-5px;">Win / Loss / Draw breakdown.</p>
+        <div class="chart-container">
+            <canvas id="chartResults"></canvas>
+        </div>
+    </div>
 
     <div class="card">
         <h3>📊 Game-by-Game Trend</h3>
@@ -540,6 +552,13 @@
     </div>
 </div>
 
+<div id="loading-modal" class="modal-overlay" style="z-index: 10000;">
+    <div class="modal-card" style="text-align: center;">
+        <h3 id="loading-msg">Downloading Data...</h3>
+        <div style="margin-top: 15px; border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-inline: auto;"></div>
+    </div>
+</div>
+
 <script>
     const GOOGLE_SHEETS_URL = "https://script.google.com/macros/s/AKfycbyYlaMBB5IBHI0GJ_GaXU9Mwgl6h35ZdTUsGKdMo__59k6ZpoiB4DdNjJ3j1qgoNFx-UQ/exec";
 
@@ -568,6 +587,7 @@
     let chartShootersInstance = null;
     let chartGamesInstance = null;
     let chartQuartersInstance = null;
+    let chartResultsInstance = null;
 
     window.addEventListener('beforeunload', function (e) { if (isGameActive()) { e.preventDefault(); e.returnValue = ''; } });
 
@@ -658,7 +678,6 @@
         });
     }
 
-    // --- HIGH PERFORMANCE: O(N) Map-based Parser ---
     function processCloudRowsToMatches(rows) {
         let matchesMap = {};
         let tempRosters = {};
@@ -707,7 +726,6 @@
         return { matchesMap, tempRosters, uniqueCarnivals, uniqueTeams };
     }
 
-    // --- HIGH PERFORMANCE: O(N) Map-based Deduplicator ---
     function getLatestRows(rows) {
         if (!Array.isArray(rows)) return [];
         let latestRowsMap = new Map();
@@ -720,7 +738,6 @@
             const qNum = String(row[3] || "").trim();
             const playerName = String(row[6] || "").trim();
 
-            // Roster updates aren't tied to a quarter, retain all of them using index to ensure uniqueness
             if (!gNum || gNum === "Roster_Update" || gNum === "Roster_Delete") {
                 latestRowsMap.set(`NON_GAME_${i}`, row);
                 continue;
@@ -739,25 +756,45 @@
     }
 
     async function fetchCarnivalsAndTeams() {
-        const btn = document.getElementById('btn-fetch-cloud-meta'), originalText = btn.innerText;
+        const btn = document.getElementById('btn-fetch-cloud-meta');
+        const originalText = btn.innerText;
         btn.innerText = "⏳ Fetching..."; btn.disabled = true;
 
-        // Yield to allow UI to paint "Fetching..."
         await new Promise(resolve => setTimeout(resolve, 50));
 
         let userToken = localStorage.getItem('netball_security_token');
-        if (!userToken) { userToken = prompt("🔑 Enter Security Token:"); localStorage.setItem('netball_security_token', userToken || ""); }
+        if (!userToken) { 
+            userToken = prompt("🔑 Enter Security Token:"); 
+            if (userToken) localStorage.setItem('netball_security_token', userToken.trim()); 
+        }
         if (!userToken) { btn.innerText = originalText; btn.disabled = false; return; }
 
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); 
+
         try {
-            const response = await fetch(`${GOOGLE_SHEETS_URL}?token=${encodeURIComponent(userToken)}&fetchType=summary`);
+            const response = await fetch(`${GOOGLE_SHEETS_URL}?token=${encodeURIComponent(userToken)}&fetchType=summary`, {
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+
             const resultText = await response.text();
-            if (resultText === "Unauthorized") { alert("❌ Invalid Security Token."); localStorage.removeItem('netball_security_token'); return; }
+            if (resultText === "Unauthorized") { 
+                alert("❌ Invalid Security Token."); 
+                localStorage.removeItem('netball_security_token'); 
+                return; 
+            }
             
-            await new Promise(resolve => setTimeout(resolve, 10)); // Unblock main thread
+            await new Promise(resolve => setTimeout(resolve, 10)); 
             
             let rawRows;
-            try { rawRows = JSON.parse(resultText); } catch(e) { console.error("Invalid JSON from Cloud"); alert("Cloud Error. Try again later."); return; }
+            try { 
+                rawRows = JSON.parse(resultText); 
+            } catch(e) { 
+                console.error("Invalid JSON from Cloud"); 
+                alert("Cloud Error. Google Sheets returned invalid data. Try again later."); 
+                return; 
+            }
             
             const rows = getLatestRows(rawRows);
             globalCloudData = rows; 
@@ -767,13 +804,12 @@
             Object.keys(tempRosters).forEach(k => { rosters[k] = tempRosters[k]; });
             localStorage.setItem('netball_rosters', JSON.stringify(rosters));
 
-            // High Performance Fragment rendering for Dropdowns
             const carnSel = document.getElementById('carnival-select');
             carnSel.innerHTML = `<option value="_default_">-- Select Carnival --</option><option value="_new_">+ Create New Carnival...</option>`;
             let carnFrag = document.createDocumentFragment();
             uniqueCarnivals.forEach(c => {
                 let opt = document.createElement('option');
-                opt.value = c; opt.textContent = c;
+                opt.value = c; opt.textContent = c; 
                 carnFrag.appendChild(opt);
             });
             carnSel.appendChild(carnFrag);
@@ -784,13 +820,22 @@
             let teamFrag = document.createDocumentFragment();
             uniqueTeams.forEach(t => {
                 let opt = document.createElement('option');
-                opt.value = t; opt.textContent = t;
+                opt.value = t; opt.textContent = t; 
                 teamFrag.appendChild(opt);
             });
             teamSel.appendChild(teamFrag);
             setupDropdownInitialState('team-select', 'our-team-name', savedOurTeamName, "");
 
-        } catch (err) { alert("⚠️ Failed to fetch from Cloud."); } finally { btn.innerText = originalText; btn.disabled = false; }
+        } catch (err) { 
+            if (err.name === 'AbortError') {
+                alert("⚠️ Request timed out. Google Sheets is taking too long to respond.");
+            } else {
+                alert("⚠️ Failed to fetch from Cloud. Check your internet connection."); 
+            }
+        } finally { 
+            btn.innerText = originalText; 
+            btn.disabled = false; 
+        }
     }
 
     async function syncSpecificData(targetCarnival, targetTeam) {
@@ -806,7 +851,7 @@
             const resultText = await response.text();
             if (resultText === "Unauthorized") { alert("❌ Invalid Token. Starting fresh local instance."); localStorage.removeItem('netball_security_token'); return; }
             
-            await new Promise(resolve => setTimeout(resolve, 10)); // Unblock UI thread
+            await new Promise(resolve => setTimeout(resolve, 10)); 
             
             let rawRows;
             try { rawRows = JSON.parse(resultText); } catch(e) { console.error("Invalid JSON during specific sync"); return; }
@@ -835,7 +880,6 @@
                 });
             });
 
-            // HIGH PERFORMANCE: O(1) Non-Destructive Data Merge
             let localMap = new Map(carnivalHistory.map(m => [`${m.carnivalName}::${m.ourTeam}::${m.gameNumber}`, m]));
             let cloudMap = new Map(cloudMatches.filter(m => m.carnivalName === targetCarnival).map(m => [`${m.carnivalName}::${m.ourTeam}::${m.gameNumber}`, m]));
             
@@ -873,7 +917,6 @@
         carnivalName = selCarnival; savedOurTeamName = selTeam;
         localStorage.setItem('netball_carnival_name', carnivalName); localStorage.setItem('netball_our_team_name', savedOurTeamName);
 
-        // Explicitly yield to the browser so the "Loading Data..." text paints
         await new Promise(resolve => setTimeout(resolve, 50));
 
         await syncSpecificData(carnivalName, savedOurTeamName);
@@ -881,7 +924,6 @@
         refreshDynamicHeaders(); 
         currentGame.ourTeam = savedOurTeamName; 
 
-        // Batch UI computations
         requestAnimationFrame(() => {
             loadCurrentRoster(); 
             populateOpponentDropdown();
@@ -938,7 +980,7 @@
                 if (!hasUsData && (q.oppGoals || 0) > 0) exportData.push([matchName, team, opp, qNum, 0, q.oppGoals || 0, "No Data", "-", 0, 0, 0, "0%", finalTimestamp, carnivalName, pushTimestamp, pbpString]);
             });
         }
-        if (exportData.length === 0) return true; // Technically nothing to push, so mark synced
+        if (exportData.length === 0) return true; 
         
         try {
             const response = await fetch(GOOGLE_SHEETS_URL, { method: 'POST', body: JSON.stringify({ token: userToken, matchData: exportData }), headers: { 'Content-Type': 'text/plain;charset=utf-8' } });
@@ -957,7 +999,7 @@
         let userToken = localStorage.getItem('netball_security_token');
         if (!userToken) { 
             userToken = prompt("🔑 Enter Security Token to sync pending games:"); 
-            localStorage.setItem('netball_security_token', userToken || ""); 
+            if (userToken) localStorage.setItem('netball_security_token', userToken.trim()); 
         }
         if (!userToken) { 
             syncBtn.innerText = ogText; 
@@ -967,30 +1009,18 @@
 
         let successCount = 0;
         let failCount = 0;
-        
-        // Arrays to hold our parallel promises and track their original indices
-        let syncPromises = [];
-        let syncIndices = [];
 
         for (let i = 0; i < carnivalHistory.length; i++) {
             if (carnivalHistory[i].isSynced === false) {
-                syncPromises.push(autoPushToGoogleSheets(carnivalHistory[i]));
-                syncIndices.push(i);
-            }
-        }
-
-        // Execute all network requests simultaneously
-        if (syncPromises.length > 0) {
-            const results = await Promise.all(syncPromises);
-            
-            results.forEach((success, index) => {
+                const success = await autoPushToGoogleSheets(carnivalHistory[i]);
                 if (success) {
-                    carnivalHistory[syncIndices[index]].isSynced = true;
+                    carnivalHistory[i].isSynced = true;
                     successCount++;
                 } else {
                     failCount++;
                 }
-            });
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
         }
         
         localStorage.setItem('netball_history', JSON.stringify(carnivalHistory));
@@ -1058,8 +1088,12 @@
 
     function updateOpponent(name) {
         currentGame.opponent = name || "???";
-        document.getElementById('display-opp').innerText = currentGame.opponent; document.getElementById('opp-card-title').innerHTML = `<strong>${currentGame.opponent.trim()}</strong>`;
-        renderOpponentHistory(currentGame.opponent); updateLiveUI();
+        const safeName = currentGame.opponent.replace(/</g, "&lt;").replace(/>/g, "&gt;").trim();
+        
+        document.getElementById('display-opp').innerText = currentGame.opponent; 
+        document.getElementById('opp-card-title').innerHTML = `<strong>${safeName}</strong>`;
+        renderOpponentHistory(currentGame.opponent); 
+        updateLiveUI();
     }
 
     function renderOpponentHistory(oppName) {
@@ -1104,9 +1138,6 @@
     function refreshDynamicHeaders() {
         const cName = carnivalName || "Netball Carnival", tName = savedOurTeamName || "Our Team";
         document.getElementById('carnival-title-display').innerText = `${tName} @ ${cName}`;
-        document.getElementById('active-carnival-stats-header').innerText = `Carnival Stats: ${tName} @ ${cName}`;
-        document.getElementById('history-log-summary').innerHTML = `📂 History: ${tName} @ ${cName}`;
-        document.getElementById('prev-carnivals-summary').innerHTML = `📂 Previous Carnivals: ${tName}`;
     }
 
     function getActiveHistory() { return carnivalHistory.filter(m => { return (m.carnivalName || "Netball Carnival Tracker") === carnivalName && (m.ourTeam || "Our Team") === savedOurTeamName; }); }
@@ -1624,13 +1655,32 @@
     function openShareModal(matchData, isNewSave = false) { pendingShareContext = { matchData, isNewSave }; document.getElementById('share-modal').style.display = 'flex'; }
     function closeShareModal() { document.getElementById('share-modal').style.display = 'none'; if (pendingShareContext && pendingShareContext.isNewSave) resetLiveGame(); pendingShareContext = null; }
     
-    function executeShare() {
+    async function executeShare() {
         if (!pendingShareContext) return;
         
         const shareType = document.querySelector('input[name="shareType"]:checked').value;
         const options = { includeTotals: shareType !== 'parent', includeQuarterScores: true, includeQuarterStats: shareType !== 'parent', includePBP: shareType === 'coach-pbp' };
 
-        const m = pendingShareContext.matchData, teamLabel = m.ourTeam || "Our Team", wasNewSave = pendingShareContext.isNewSave;
+        let m = pendingShareContext.matchData; 
+        const teamLabel = m.ourTeam || "Our Team"; 
+        const wasNewSave = pendingShareContext.isNewSave;
+
+        if (options.includePBP) {
+            let needsFetch = false;
+            if (m.quartersBreakdown) {
+                m.quartersBreakdown.forEach(q => {
+                    if (!q.playByPlay || q.playByPlay.length === 0) {
+                        if (q.gsGoals > 0 || q.gaGoals > 0 || q.gsMisses > 0 || q.gaMisses > 0 || q.oppGoals > 0) needsFetch = true;
+                    }
+                });
+            }
+            if (needsFetch) {
+                document.getElementById('loading-modal').style.display = 'flex';
+                m = await fetchDetailedPBPForMatch(m);
+                document.getElementById('loading-modal').style.display = 'none';
+            }
+        }
+
         const shareText = generateCleanExportText(teamLabel, m.opponent, m.teamScore || m.matchTotalScore, m.opponentScore || m.opponentTotalScore || 0, m.quartersBreakdown || m.quartersData, options);
         document.getElementById('share-modal').style.display = 'none'; pendingShareContext = null; shareResult(shareText);
         if (wasNewSave) setTimeout(() => { resetLiveGame(); }, 100);
@@ -1665,8 +1715,8 @@
             if (!currentGame.loadedPastGame) {
                 const pushSuccess = await autoPushToGoogleSheets(matchData);
                 matchData.isSynced = pushSuccess;
-                localStorage.setItem('netball_history', JSON.stringify(carnivalHistory)); // Re-save with updated flag
-                renderHistory(); // Re-render to clear badge if successful
+                localStorage.setItem('netball_history', JSON.stringify(carnivalHistory)); 
+                renderHistory(); 
             } else {
                 matchData.isSynced = false;
                 localStorage.setItem('netball_history', JSON.stringify(carnivalHistory));
@@ -1820,6 +1870,9 @@
     }
 
     function deleteSavedGame(globalIndex) {
+        const m = carnivalHistory[globalIndex];
+        if (m.isSynced === false) { alert("You can only delete games that have been saved and uploaded (synced) to the cloud."); return; }
+        
         if (confirm("Are you sure you want to permanently delete this game from your local history?")) {
             carnivalHistory.splice(globalIndex, 1); localStorage.setItem('netball_history', JSON.stringify(carnivalHistory));
             renderHistory(); calculateCarnivalTotals(); updateSetupStatsDisplay(); updateLiveUI();
@@ -1947,7 +2000,6 @@
         exportBtn.innerText = "⏳ Fetching Data..."; exportBtn.disabled = true;
         document.body.style.cursor = 'wait';
 
-        // Unblock UI so 'Fetching Data' renders
         await new Promise(resolve => setTimeout(resolve, 20));
 
         let userToken = localStorage.getItem('netball_security_token');
@@ -1957,7 +2009,7 @@
                 const response = await fetch(url);
                 const resultText = await response.text();
                 
-                await new Promise(resolve => setTimeout(resolve, 20)); // Unblock before massive parse
+                await new Promise(resolve => setTimeout(resolve, 20)); 
                 
                 if (resultText !== "Unauthorized") {
                     let rawRows;
@@ -2134,6 +2186,25 @@
     function renderStatistics() {
         const activeHistory = getActiveHistory();
         
+        let wins = 0, losses = 0, draws = 0;
+        activeHistory.forEach(m => {
+            let us = m.teamScore || 0, them = m.opponentScore || 0;
+            if(us > them) wins++; else if(them > us) losses++; else draws++;
+        });
+
+        if(chartResultsInstance) chartResultsInstance.destroy();
+        chartResultsInstance = new Chart(document.getElementById('chartResults'), { 
+            type: 'doughnut', 
+            data: { 
+                labels: ['Wins', 'Losses', 'Draws'], 
+                datasets: [{ 
+                    data: [wins, losses, draws], 
+                    backgroundColor: ['#2e7d32', '#c62828', '#ed6c02']
+                }] 
+            }, 
+            options: { responsive: true, maintainAspectRatio: false } 
+        });
+        
         const gameLabels = activeHistory.map((m, i) => m.gameNumber || `Game ${i+1}`);
         const usScores = activeHistory.map(m => m.teamScore || 0);
         const oppScores = activeHistory.map(m => m.opponentScore || 0);
@@ -2141,8 +2212,23 @@
         if(chartGamesInstance) chartGamesInstance.destroy();
         chartGamesInstance = new Chart(document.getElementById('chartGames'), { type: 'line', data: { labels: gameLabels, datasets: [ { label: 'Our Team', data: usScores, borderColor: '#2b5c8f', backgroundColor: 'rgba(43, 92, 143, 0.2)', tension: 0.1, fill: true, borderWidth: 2 }, { label: 'Opponent', data: oppScores, borderColor: '#c62828', backgroundColor: 'rgba(198, 40, 40, 0.2)', tension: 0.1, fill: true, borderWidth: 2 } ] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } } });
 
-        const pNames = [], pGoals = [], pMisses = [];
-        players.forEach(p => { const stats = individualStatsCache[p] || { goals: 0, shots: 0 }; if(stats.shots > 0) { pNames.push(p); pGoals.push(stats.goals); pMisses.push(stats.shots - stats.goals); } });
+        let shooterData = [];
+        players.forEach(p => { 
+            const stats = individualStatsCache[p] || { goals: 0, shots: 0 }; 
+            if(stats.shots > 0) { 
+                shooterData.push({ 
+                    name: p, 
+                    goals: stats.goals, 
+                    misses: stats.shots - stats.goals, 
+                    acc: Math.round((stats.goals / stats.shots) * 100) 
+                }); 
+            } 
+        });
+        shooterData.sort((a, b) => b.acc - a.acc);
+        
+        const pNames = shooterData.map(d => `${d.name} (${d.acc}%)`);
+        const pGoals = shooterData.map(d => d.goals);
+        const pMisses = shooterData.map(d => d.misses);
 
         if(chartShootersInstance) chartShootersInstance.destroy();
         chartShootersInstance = new Chart(document.getElementById('chartShooters'), { type: 'bar', data: { labels: pNames, datasets: [ { label: 'Goals', data: pGoals, backgroundColor: 'rgba(46, 125, 50, 0.2)', borderColor: '#2e7d32', borderWidth: 1 }, { label: 'Misses', data: pMisses, backgroundColor: 'rgba(198, 40, 40, 0.2)', borderColor: '#c62828', borderWidth: 1 } ] }, options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } } } });
@@ -2161,7 +2247,7 @@
     function resetLiveGame() {
         currentGame = { gameNumber: "", ourTeam: savedOurTeamName, opponent: "", currentQuarter: 1, matchTotalScore: 0, opponentTotalScore: 0, quartersData: [], liveGs: { goals: 0, misses: 0 }, liveGa: { goals: 0, misses: 0 }, liveOpponent: { goals: 0, misses: 0 }, gsPlayer: "", gaPlayer: "", runningGameTotals: {}, runningOppTotals: { goals: 0, shots: 0 }, log: [], shotHistory: [], oppShotHistory: [], playByPlay: [], matchTimestamp: null, isDirty: false, originalQuarterBackup: null, isEditMode: false, loadedPastGame: false };
         
-        populateOpponentDropdown(); // Refresh the list with the newly saved opponent
+        populateOpponentDropdown(); 
         setupDropdownInitialState('opponent-select', 'opponent-name-input', "", "");
         
         document.getElementById('display-opp').innerText = "???"; document.getElementById('opp-card-title').innerHTML = `<strong>Opponent</strong>`;
