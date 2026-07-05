@@ -178,6 +178,13 @@
         .btn-nav { flex: 1; padding: 8px; font-size: 0.85rem; border-radius: 4px; font-weight: bold; cursor: pointer; text-align: center; border: 1px solid; }
         .btn-nav-stats { background-color: rgba(139, 92, 246, 0.1) !important; border-color: #c4b5fd !important; color: #7c3aed !important; }
         .btn-nav-change { background-color: rgba(71, 85, 105, 0.1) !important; border-color: #cbd5e1 !important; color: #475569 !important; }
+        .stats-match-list { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+        .stats-match-card { border: 1px solid #e2e8f0; border-left: 5px solid var(--primary); padding: 12px; border-radius: 8px; background: #ffffff; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .stats-match-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
+        .stats-match-title { font-size: 0.95rem; line-height: 1.35; color: #334155; }
+        .stats-match-score { font-size: 1rem; font-weight: bold; color: var(--primary); white-space: nowrap; text-align: right; }
+        .stats-match-meta { font-size: 0.85rem; color: #64748b; line-height: 1.4; }
+        .btn-stats-details { flex: 1; padding: 8px; font-size: 0.85rem; border-radius: 4px; font-weight: bold; cursor: pointer; text-align: center; border: 1px solid #c4b5fd !important; margin-top: 10px; width: 100%; }
 
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 1000; }
         .modal-card { background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 350px; box-shadow: 0 10px 15px rgba(0,0,0,0.2); }
@@ -206,6 +213,8 @@
         @media (max-width: 480px) {
             .setup-stats-grid { grid-template-columns: 1fr !important; }
             .history-actions { flex-direction: column; }
+            .stats-match-header { flex-direction: column; align-items: stretch; gap: 6px; }
+            .stats-match-score { text-align: left; }
             .form-group.responsive-stack { flex-direction: column; gap: 5px; }
             .shooter-card { flex-direction: row; }
             .shooter-card .btn-goal, .shooter-card .btn-miss { font-size: 1rem; }
@@ -222,7 +231,7 @@
 
 <div id="start-page" class="container" style="max-width: 450px; margin-top: 40px;">
     <div class="card" style="text-align: center; padding: 30px 20px;">
-        <h1 style="margin-bottom: 10px; font-size: 2.2rem;">Netball Tracker</h1>
+        <h1 style="margin-bottom: 10px; font-size: 2.2rem;">Netball Shooting Statistics Tracker</h1>
         <p style="color: #64748b; margin-bottom: 25px; font-size: 0.95rem;">Select your configuration to begin.</p>
         
         <button class="btn" id="btn-fetch-cloud-meta" onclick="fetchCarnivalsAndTeams()" style="background-color: #0ea5e9; width:100%; margin-bottom: 25px; padding: 12px;">☁️ Fetch Cloud Carnivals / Teams</button>
@@ -251,7 +260,7 @@
 
 <div id="main-app" class="container" style="display: none;">
     <header style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; padding: 0 5px;">
-        <h1 id="carnival-title-display" style="text-align: center; margin: 0; line-height: 1.2;">Netball Tracker</h1>
+        <h1 id="carnival-title-display" style="text-align: center; margin: 0; line-height: 1.2;">Netball Shooting Statistics Tracker</h1>
         <div style="display: flex; gap: 8px; width: 100%;">
             <button class="btn-nav btn-nav-stats" onclick="goToStatsPage()">📊 View Statistics</button>
             <button class="btn-nav btn-nav-change" onclick="goBackToStart()">🔄 Change Team</button>
@@ -479,13 +488,14 @@
         </div>
     </header>
 
-    <div class="card">
-        <h3>🏆 Match Results</h3>
-        <p style="font-size:0.85rem; color:#666; margin-top:-5px;">Win / Loss / Draw breakdown.</p>
-        <div class="chart-container">
-            <canvas id="chartResults"></canvas>
+    <details class="card">
+        <summary>🏆 Carnival Results</summary>
+        <div class="details-content">
+            <p style="font-size:0.85rem; color:#666; margin-top:0;">Results from the current carnival.</p>
+            <div id="stats-match-list">
+                </div>
         </div>
-    </div>
+    </details>
 
     <div class="card">
         <h3>📊 Game-by-Game Trend</h3>
@@ -508,6 +518,16 @@
         <p style="font-size:0.85rem; color:#666; margin-top:-5px;">Average offensive and defensive performance per quarter segment.</p>
         <div class="chart-container">
             <canvas id="chartQuarters"></canvas>
+        </div>
+    </div>
+</div>
+
+<div id="game-details-modal" class="modal-overlay">
+    <div class="modal-card" style="max-width: 500px; width: 95%; max-height: 90vh; overflow-y: auto;">
+        <h3 style="margin-bottom: 10px; border-bottom: 2px solid var(--primary); padding-bottom: 5px; color: var(--primary);">Game Details</h3>
+        <div id="game-details-content" style="margin-bottom: 15px; color: var(--text);"></div>
+        <div class="modal-buttons">
+            <button class="btn-cancel" onclick="closeGameDetailsModal()" style="width: 100%;">Close</button>
         </div>
     </div>
 </div>
@@ -588,6 +608,16 @@
     let chartGamesInstance = null;
     let chartQuartersInstance = null;
     let chartResultsInstance = null;
+
+    // Helper functions for loading modal
+    function showLoader(msg) {
+        document.getElementById('loading-msg').innerText = msg || "Downloading Data...";
+        document.getElementById('loading-modal').style.display = 'flex';
+    }
+    
+    function hideLoader() {
+        document.getElementById('loading-modal').style.display = 'none';
+    }
 
     window.addEventListener('beforeunload', function (e) { if (isGameActive()) { e.preventDefault(); e.returnValue = ''; } });
 
@@ -759,6 +789,8 @@
         const btn = document.getElementById('btn-fetch-cloud-meta');
         const originalText = btn.innerText;
         btn.innerText = "⏳ Fetching..."; btn.disabled = true;
+        
+        showLoader("Fetching Carnivals & Teams...");
 
         await new Promise(resolve => setTimeout(resolve, 50));
 
@@ -767,13 +799,13 @@
             userToken = prompt("🔑 Enter Security Token:"); 
             if (userToken) localStorage.setItem('netball_security_token', userToken.trim()); 
         }
-        if (!userToken) { btn.innerText = originalText; btn.disabled = false; return; }
+        if (!userToken) { btn.innerText = originalText; btn.disabled = false; hideLoader(); return; }
 
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 15000); 
 
         try {
-            const response = await fetch(`${GOOGLE_SHEETS_URL}?token=${encodeURIComponent(userToken)}&fetchType=summary`, {
+            const response = await fetch(`${GOOGLE_SHEETS_URL}?token=${encodeURIComponent(userToken)}&fetchType=meta`, {
                 signal: controller.signal
             });
             clearTimeout(timeoutId);
@@ -782,6 +814,7 @@
             if (resultText === "Unauthorized") { 
                 alert("❌ Invalid Security Token."); 
                 localStorage.removeItem('netball_security_token'); 
+                hideLoader();
                 return; 
             }
             
@@ -793,16 +826,29 @@
             } catch(e) { 
                 console.error("Invalid JSON from Cloud"); 
                 alert("Cloud Error. Google Sheets returned invalid data. Try again later."); 
+                hideLoader();
                 return; 
             }
             
-            const rows = getLatestRows(rawRows);
-            globalCloudData = rows; 
-            
-            const { tempRosters, uniqueCarnivals, uniqueTeams } = processCloudRowsToMatches(rows);
-            
-            Object.keys(tempRosters).forEach(k => { rosters[k] = tempRosters[k]; });
-            localStorage.setItem('netball_rosters', JSON.stringify(rosters));
+            let uniqueCarnivals = new Set();
+            let uniqueTeams = new Set();
+
+            if (rawRows && rawRows.carnivals && rawRows.teams) {
+                // If backend supports meta filtering
+                rawRows.carnivals.forEach(c => uniqueCarnivals.add(c));
+                rawRows.teams.forEach(t => uniqueTeams.add(t));
+            } else {
+                // Fallback to legacy processing if backend hasn't implemented fetchType=meta correctly
+                const rows = getLatestRows(rawRows);
+                globalCloudData = rows; 
+                
+                const { tempRosters, uniqueCarnivals: uc, uniqueTeams: ut } = processCloudRowsToMatches(rows);
+                uniqueCarnivals = uc;
+                uniqueTeams = ut;
+                
+                Object.keys(tempRosters).forEach(k => { rosters[k] = tempRosters[k]; });
+                localStorage.setItem('netball_rosters', JSON.stringify(rosters));
+            }
 
             const carnSel = document.getElementById('carnival-select');
             carnSel.innerHTML = `<option value="_default_">-- Select Carnival --</option><option value="_new_">+ Create New Carnival...</option>`;
@@ -835,6 +881,7 @@
         } finally { 
             btn.innerText = originalText; 
             btn.disabled = false; 
+            hideLoader();
         }
     }
 
@@ -845,9 +892,11 @@
             if (!userToken) return;
             localStorage.setItem('netball_security_token', userToken.trim());
         }
+        
+        showLoader("Syncing specific data...");
 
         try {
-            const response = await fetch(`${GOOGLE_SHEETS_URL}?token=${encodeURIComponent(userToken)}&fetchType=summary`);
+            const response = await fetch(`${GOOGLE_SHEETS_URL}?token=${encodeURIComponent(userToken)}&fetchType=summary&carnival=${encodeURIComponent(targetCarnival)}&team=${encodeURIComponent(targetTeam)}`);
             const resultText = await response.text();
             if (resultText === "Unauthorized") { alert("❌ Invalid Token. Starting fresh local instance."); localStorage.removeItem('netball_security_token'); return; }
             
@@ -902,6 +951,7 @@
             localStorage.setItem('netball_history', JSON.stringify(carnivalHistory));
 
         } catch (err) { console.error("Cloud fetch failed", err); }
+        finally { hideLoader(); }
     }
 
     async function confirmStartSelection() {
@@ -1006,6 +1056,8 @@
             syncBtn.disabled = false; 
             return; 
         }
+        
+        showLoader("Pushing Pending Games...");
 
         let successCount = 0;
         let failCount = 0;
@@ -1029,6 +1081,8 @@
         syncBtn.innerText = ogText; 
         syncBtn.disabled = false;
         
+        hideLoader();
+        
         if (successCount > 0 && failCount === 0) {
             alert(`✅ Successfully synced ${successCount} offline games to the cloud!`);
         } else if (failCount > 0) {
@@ -1040,7 +1094,23 @@
 
     function getNextGameNumber() {
         const localActive = getActiveHistory();
-        let nextNum = localActive.length + 1;
+        let maxNum = 0;
+        
+        // Loop through all games to find the highest game number
+        localActive.forEach(m => {
+            if (m.gameNumber) {
+                // Extract just the numbers from the "Game X" string
+                const numMatch = m.gameNumber.match(/\d+/);
+                if (numMatch) {
+                    const currentNum = parseInt(numMatch[0], 10);
+                    if (currentNum > maxNum) {
+                        maxNum = currentNum;
+                    }
+                }
+            }
+        });
+        
+        let nextNum = maxNum + 1;
         document.getElementById('game-number-input').value = "Game " + nextNum; 
         currentGame.gameNumber = "Game " + nextNum;
     }
@@ -1675,9 +1745,9 @@
                 });
             }
             if (needsFetch) {
-                document.getElementById('loading-modal').style.display = 'flex';
+                showLoader("Fetching Detailed PBP...");
                 m = await fetchDetailedPBPForMatch(m);
-                document.getElementById('loading-modal').style.display = 'none';
+                hideLoader();
             }
         }
 
@@ -1711,6 +1781,9 @@
             localStorage.setItem('netball_history', JSON.stringify(carnivalHistory));
             
             renderHistory(); calculateCarnivalTotals(); 
+            
+            // Refresh game number immediately
+            getNextGameNumber();
             
             if (!currentGame.loadedPastGame) {
                 const pushSuccess = await autoPushToGoogleSheets(matchData);
@@ -1760,6 +1833,7 @@
         let userToken = localStorage.getItem('netball_security_token');
         if (userToken) {
             document.body.style.cursor = 'wait';
+            showLoader("Loading Game Data...");
             try {
                 const url = `${GOOGLE_SHEETS_URL}?token=${encodeURIComponent(userToken)}&fetchType=pbp&carnival=${encodeURIComponent(matchToEdit.carnivalName)}&team=${encodeURIComponent(matchToEdit.ourTeam)}&gameNumber=${encodeURIComponent(matchToEdit.gameNumber)}`;
                 const response = await fetch(url);
@@ -1793,6 +1867,7 @@
                 }
             } catch(e) {}
             document.body.style.cursor = 'default';
+            hideLoader();
         }
         
         let targetQData = matchToEdit.quartersBreakdown.find(q => q.quarterNumber === targetQ);
@@ -1999,6 +2074,8 @@
         const ogText = exportBtn.innerText;
         exportBtn.innerText = "⏳ Fetching Data..."; exportBtn.disabled = true;
         document.body.style.cursor = 'wait';
+        
+        showLoader("Preparing CSV Data...");
 
         await new Promise(resolve => setTimeout(resolve, 20));
 
@@ -2037,6 +2114,7 @@
         
         document.body.style.cursor = 'default';
         exportBtn.innerText = ogText; exportBtn.disabled = false;
+        hideLoader();
 
         let totalUsGoals = 0, totalUsShots = 0, totalOppGoals = 0, totalOppShots = 0;
         let pStats = {};
@@ -2130,11 +2208,21 @@
             else { teamDisplay = `<span style="font-weight: normal;">${teamLabel}</span>`; oppDisplay = `<span style="font-weight: normal;">${cleanOppName}</span>`; }
 
             const matchStats = getMatchPlayerStats(m.quartersBreakdown || []);
-            const matchSummaryHtml = Object.keys(matchStats).map(p => { let s = matchStats[p], pct = s.shots > 0 ? Math.round((s.goals/s.shots)*100) : 0; return `<div><strong>👤 ${p}:</strong> ${s.goals}/${s.shots} (${pct}%)</div>`; }).join('') || "<div>No player stats recorded.</div>";
+            let teamUsGoals = 0, teamUsShots = 0;
+            const matchSummaryHtml = Object.keys(matchStats).map(p => { 
+                let s = matchStats[p], pct = s.shots > 0 ? Math.round((s.goals/s.shots)*100) : 0; 
+                teamUsGoals += s.goals;
+                teamUsShots += s.shots;
+                return `<div><span style="display:inline-block; width: 15px;">👤</span> <strong>${p}:</strong> ${s.goals}/${s.shots} (${pct}%)</div>`; 
+            }).join('') || "<div>No individual player stats recorded.</div>";
+            
+            let teamAccuracy = teamUsShots > 0 ? Math.round((teamUsGoals / teamUsShots) * 100) : 0;
+            const teamSummaryHtml = `<div style="margin-bottom: 4px; color: var(--primary);"><strong>🛡️ ${teamLabel} Shooting:</strong> ${teamUsGoals} / ${teamUsShots} (${teamAccuracy}%)</div>`;
+
             let oppTotalGoals = 0, oppTotalMisses = 0;
             if (m.quartersBreakdown) { m.quartersBreakdown.forEach(q => { oppTotalGoals += (q.oppGoals || 0); oppTotalMisses += (q.oppMisses || 0); }); }
             let oppTotalShots = oppTotalGoals + oppTotalMisses, oppAccuracy = oppTotalShots > 0 ? Math.round((oppTotalGoals / oppTotalShots) * 100) : 0;
-            const oppSummaryHtml = `<div style="margin-top: 4px; padding-top: 4px; border-top: 1px dashed #cbd5e1; color: var(--neutral-dark);"><strong>🛡️ ${cleanOppName} Shooting:</strong> ${oppTotalGoals} / ${oppTotalShots} (${oppAccuracy}%)</div>`;
+            const oppSummaryHtml = `<div style="margin-bottom: 8px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 8px; color: var(--danger);"><strong>⚔️ ${cleanOppName} Shooting:</strong> ${oppTotalGoals} / ${oppTotalShots} (${oppAccuracy}%)</div>`;
             
             let qBreakdownHtml = "";
             if (m.quartersBreakdown) {
@@ -2171,7 +2259,12 @@
                             <div style="text-align: left;"><h4 style="margin: 0; color: #334155; font-size: 1.1rem;">${displayMatchName}: ${teamDisplay} vs ${oppDisplay}</h4>${dateStr}</div>
                             <div class="history-score">${tScore} - ${oScore}</div>
                         </div>
-                        <div style="font-size: 0.9rem; color: #475569; margin-bottom: 5px; line-height: 1.4; text-align: left;">${matchSummaryHtml}${oppSummaryHtml}</div>
+                        <div style="font-size: 0.9rem; color: #475569; margin-bottom: 5px; line-height: 1.4; text-align: left;">
+                            ${teamSummaryHtml}
+                            ${oppSummaryHtml}
+                            <div style="font-weight: bold; margin-bottom: 4px; color: #333;">Player Breakdown:</div>
+                            ${matchSummaryHtml}
+                        </div>
                         <div class="scrollable-quarter-data" style="text-align: left;">${qBreakdownHtml}</div>
                         <div class="history-actions">
                             <button class="btn-edit-action" onclick="editSavedGame(${globalIndex})">✏️ Edit</button>
@@ -2186,25 +2279,40 @@
     function renderStatistics() {
         const activeHistory = getActiveHistory();
         
-        let wins = 0, losses = 0, draws = 0;
-        activeHistory.forEach(m => {
-            let us = m.teamScore || 0, them = m.opponentScore || 0;
-            if(us > them) wins++; else if(them > us) losses++; else draws++;
-        });
+        // --- Added logic for Carnival Results list ---
+        const statsMatchList = document.getElementById('stats-match-list');
+        if (activeHistory.length === 0) {
+            statsMatchList.innerHTML = `<p style="text-align:center; color:#999; margin-top: 15px;">No games recorded yet.</p>`;
+        } else {
+            let listHtml = `<div class="stats-match-list">`;
+            activeHistory.forEach((m) => {
+                const globalIndex = carnivalHistory.indexOf(m);
+                const gameName = m.gameNumber || `Game`;
+                const usScore = m.teamScore || 0;
+                const oppScore = m.opponentScore || 0;
+                const oppName = m.opponent || "Opponent";
+                const teamName = m.ourTeam || savedOurTeamName || "Our Team";
+                let resultText = "Draw";
+                let resultColor = "var(--warning)";
+                if (usScore > oppScore) { resultText = "Win"; resultColor = "var(--success)"; }
+                else if (oppScore > usScore) { resultText = "Loss"; resultColor = "var(--danger)"; }
 
-        if(chartResultsInstance) chartResultsInstance.destroy();
-        chartResultsInstance = new Chart(document.getElementById('chartResults'), { 
-            type: 'doughnut', 
-            data: { 
-                labels: ['Wins', 'Losses', 'Draws'], 
-                datasets: [{ 
-                    data: [wins, losses, draws], 
-                    backgroundColor: ['#2e7d32', '#c62828', '#ed6c02']
-                }] 
-            }, 
-            options: { responsive: true, maintainAspectRatio: false } 
-        });
-        
+                listHtml += `
+                <div class="stats-match-card">
+                    <div class="stats-match-header">
+                        <div class="stats-match-title">
+                            <strong style="color: ${resultColor};">[${resultText}]</strong> <strong>${gameName}</strong><br>
+                            <span class="stats-match-meta">${teamName} vs ${oppName}</span>
+                        </div>
+                        <div class="stats-match-score">${usScore} - ${oppScore}</div>
+                    </div>
+                    <button class="btn-nav btn-nav-stats btn-stats-details" onclick="showGameDetails(${globalIndex})">📄 Details</button>
+                </div>`;
+            });
+            listHtml += `</div>`;
+            statsMatchList.innerHTML = listHtml;
+        }
+
         const gameLabels = activeHistory.map((m, i) => m.gameNumber || `Game ${i+1}`);
         const usScores = activeHistory.map(m => m.teamScore || 0);
         const oppScores = activeHistory.map(m => m.opponentScore || 0);
@@ -2242,6 +2350,90 @@
 
         if(chartQuartersInstance) chartQuartersInstance.destroy();
         chartQuartersInstance = new Chart(document.getElementById('chartQuarters'), { type: 'bar', data: { labels: qLabels, datasets: [ { label: 'Us Avg Goals', data: qUsAvg, backgroundColor: 'rgba(43, 92, 143, 0.2)', borderColor: '#2b5c8f', borderWidth: 1 }, { label: 'Opp Avg Goals', data: qOppAvg, backgroundColor: 'rgba(198, 40, 40, 0.2)', borderColor: '#c62828', borderWidth: 1 } ] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } } });
+    }
+
+    function showGameDetails(globalIndex) {
+        const m = carnivalHistory[globalIndex];
+        if (!m) return;
+        
+        let teamLabel = m.ourTeam || "Our Team"; 
+        const cleanOppName = m.opponent ? m.opponent.trim() : "Opponent";
+        const displayMatchName = m.gameNumber || `Game`;
+        const dateStr = `<div style="font-size:0.8rem; color:#64748b; margin-top:2px;">📅 ${m.matchTimestamp || "No timestamp recorded"}</div>`;
+        
+        let tScore = m.teamScore || 0, oScore = m.opponentScore || 0;
+        
+        const matchStats = getMatchPlayerStats(m.quartersBreakdown || []);
+        let teamUsGoals = 0, teamUsShots = 0;
+        const matchSummaryHtml = Object.keys(matchStats).map(p => { 
+            let s = matchStats[p], pct = s.shots > 0 ? Math.round((s.goals/s.shots)*100) : 0; 
+            teamUsGoals += s.goals;
+            teamUsShots += s.shots;
+            return `<div><span style="display:inline-block; width: 15px;">👤</span> <strong>${p}:</strong> ${s.goals}/${s.shots} (${pct}%)</div>`; 
+        }).join('') || "<div>No individual player stats recorded.</div>";
+        
+        let teamAccuracy = teamUsShots > 0 ? Math.round((teamUsGoals / teamUsShots) * 100) : 0;
+        const teamSummaryHtml = `<div style="margin-bottom: 4px; color: var(--primary);"><strong>🛡️ ${teamLabel} Shooting:</strong> ${teamUsGoals} / ${teamUsShots} (${teamAccuracy}%)</div>`;
+
+        let oppTotalGoals = 0, oppTotalMisses = 0;
+        if (m.quartersBreakdown) { m.quartersBreakdown.forEach(q => { oppTotalGoals += (q.oppGoals || 0); oppTotalMisses += (q.oppMisses || 0); }); }
+        let oppTotalShots = oppTotalGoals + oppTotalMisses, oppAccuracy = oppTotalShots > 0 ? Math.round((oppTotalGoals / oppTotalShots) * 100) : 0;
+        const oppSummaryHtml = `<div style="margin-bottom: 8px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 8px; color: var(--danger);"><strong>⚔️ ${cleanOppName} Shooting:</strong> ${oppTotalGoals} / ${oppTotalShots} (${oppAccuracy}%)</div>`;
+        
+        let qBreakdownHtml = "";
+        if (m.quartersBreakdown) {
+            let runUs = 0, runOpp = 0;
+            qBreakdownHtml = m.quartersBreakdown.map(q => {
+                const qStats = getQuarterPlayerStats(q);
+                let explicitUsQScore = 0;
+                if (q.shotHistory && q.shotHistory.length > 0) {
+                     q.shotHistory.forEach(s => { if(s.isGoal) explicitUsQScore++; });
+                } else {
+                     explicitUsQScore = (q.gsGoals || 0) + (q.gaGoals || 0);
+                }
+                let explicitOppQScore = (q.oppGoals || 0);
+
+                runUs += explicitUsQScore;
+                runOpp += explicitOppQScore;
+
+                const qHtml = Object.keys(qStats).map(p => { 
+                    let s = qStats[p], pct = s.shots > 0 ? Math.round((s.goals/s.shots)*100) : 0; 
+                    return `${p}: ${s.goals}/${s.shots} (${pct}%)`; 
+                }).join('<br>') || "No shots recorded";
+                
+                return `<div style="margin-bottom: 8px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 6px;">
+                            <strong style="color:var(--primary);">Q${q.quarterNumber} Score: ${explicitUsQScore} - ${explicitOppQScore} <span style="font-weight:normal; color:#64748b;">(Running: ${runUs} - ${runOpp})</span></strong><br>
+                            ${qHtml}
+                        </div>`;
+            }).join('');
+        }
+
+        const html = `
+            <div style="text-align: left;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
+                    <div>
+                        <h4 style="margin:0; font-size:1.1rem; color: #334155;">${displayMatchName} vs ${cleanOppName}</h4>
+                        ${dateStr}
+                    </div>
+                    <div style="font-size:1.2rem; font-weight:bold; color:var(--primary);">${tScore} - ${oScore}</div>
+                </div>
+                <div style="font-size: 0.9rem; margin-bottom: 10px;">
+                    ${teamSummaryHtml}
+                    ${oppSummaryHtml}
+                    <div style="font-weight: bold; margin-bottom: 4px; color: #333;">Player Breakdown:</div>
+                    ${matchSummaryHtml}
+                </div>
+                <div style="background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0; font-size: 0.85rem; max-height: 250px; overflow-y: auto; color: #334155;">
+                    ${qBreakdownHtml}
+                </div>
+            </div>
+        `;
+        document.getElementById('game-details-content').innerHTML = html;
+        document.getElementById('game-details-modal').style.display = 'flex';
+    }
+
+    function closeGameDetailsModal() {
+        document.getElementById('game-details-modal').style.display = 'none';
     }
 
     function resetLiveGame() {
