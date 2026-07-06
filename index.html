@@ -449,7 +449,7 @@
 
     <div style="position: relative;">
         <details class="card">
-            <summary id="history-log-summary">History</summary>
+            <summary id="history-log-summary">Carnival Results</summary>
             <div class="details-content">
                 <div class="history-actions" style="margin-top: 10px; margin-bottom: 15px;">
                     <button class="btn-row-share" id="btn-export-all" onclick="exportAllGamesCSV();">📥 Export All Games CSV</button>
@@ -510,6 +510,21 @@
         <p style="font-size:0.85rem; color:#666; margin-top:-5px;">Total Goals vs Misses for active squad members.</p>
         <div class="chart-container">
             <canvas id="chartShooters"></canvas>
+        </div>
+        <div style="overflow-x: auto; margin-top: 12px;">
+            <table class="history-table">
+                <thead>
+                    <tr>
+                        <th style="text-align: center;">Team</th>
+                        <th style="text-align: center;">Goals</th>
+                        <th style="text-align: center;">Misses</th>
+                        <th style="text-align: center;">Accuracy %</th>
+                    </tr>
+                </thead>
+                <tbody id="team-opponent-performance-rows">
+                    <tr><td colspan="4" style="text-align:center; color:#999;">No team performance data yet.</td></tr>
+                </tbody>
+            </table>
         </div>
     </div>
 
@@ -767,13 +782,16 @@
             const gNum = String(row[0] || "").trim();
             const qNum = String(row[3] || "").trim();
             const playerName = String(row[6] || "").trim();
+            const roleName = String(row[7] || "").trim();
 
             if (!gNum || gNum === "Roster_Update" || gNum === "Roster_Delete") {
                 latestRowsMap.set(`NON_GAME_${i}`, row);
                 continue;
             }
 
-            const gameKey = `${cName}::${tName}::${gNum}::${qNum}::${playerName}`;
+            // Include role so the same player can be counted twice in the same quarter
+            // when they played different positions (e.g. Grace GA and Grace GS).
+            const gameKey = `${cName}::${tName}::${gNum}::${qNum}::${playerName}::${roleName}`;
             const ts = parseInt(row[14]) || 0;
 
             const existing = latestRowsMap.get(gameKey);
@@ -1149,6 +1167,77 @@
         Array.from(uniqueOpponents).sort().forEach(opp => { html += `<option value="${opp}">${opp}</option>`; }); sel.innerHTML = html;
     }
 
+    let gameNumberRefreshTimer = null;
+
+    function getHighestLoadedGameNumber() {
+        let maxNum = 0;
+        getActiveHistory().forEach(m => {
+            if (m.gameNumber) {
+                const numMatch = String(m.gameNumber).match(/\d+/);
+                if (numMatch) maxNum = Math.max(maxNum, parseInt(numMatch[0], 10) || 0);
+            }
+        });
+        return maxNum;
+    }
+
+    function setNextGameNumberFromMax(maxNum) {
+        const nextLabel = "Game " + ((parseInt(maxNum, 10) || 0) + 1);
+        document.getElementById('game-number-input').value = nextLabel;
+        currentGame.gameNumber = nextLabel;
+    }
+
+    async function refreshGameNumberFromSheet() {
+        const hasOpponent = currentGame.opponent && currentGame.opponent.trim() !== "???";
+        if (!hasOpponent || isGameActive() || currentGame.loadedPastGame) return;
+
+        const input = document.getElementById('game-number-input');
+        if (input) input.value = "Checking sheet...";
+
+        let maxNum = getHighestLoadedGameNumber();
+        let userToken = localStorage.getItem('netball_security_token');
+
+        // Pull the latest summary rows from the Google Sheet every time an opponent is selected/changed.
+        if (userToken && carnivalName && savedOurTeamName) {
+            try {
+                const response = await fetch(`${GOOGLE_SHEETS_URL}?token=${encodeURIComponent(userToken)}&fetchType=summary&carnival=${encodeURIComponent(carnivalName)}&team=${encodeURIComponent(savedOurTeamName)}`);
+                const resultText = await response.text();
+
+                if (resultText === "Unauthorized") {
+                    localStorage.removeItem('netball_security_token');
+                } else {
+                    let rawRows = [];
+                    try { rawRows = JSON.parse(resultText); } catch(e) { rawRows = []; }
+                    const latestRows = getLatestRows(rawRows);
+
+                    latestRows.forEach(row => {
+                        const gNum = String(row[0] || "").trim();
+                        const tName = String(row[1] || "").trim();
+                        const qNum = String(row[3] || "").trim();
+                        const cName = String(row[13] || "Netball Carnival Tracker").trim();
+
+                        if (!gNum || gNum === "Roster_Update" || gNum === "Roster_Delete" || qNum === "Roster") return;
+                        if (cName !== carnivalName || tName !== savedOurTeamName) return;
+
+                        const numMatch = gNum.match(/\d+/);
+                        if (numMatch) maxNum = Math.max(maxNum, parseInt(numMatch[0], 10) || 0);
+                    });
+                }
+            } catch(e) {
+                console.warn("Could not refresh game number from sheet; using loaded history fallback.", e);
+            }
+        }
+
+        setNextGameNumberFromMax(maxNum);
+    }
+
+    function refreshGameNumberForOpponentChange() {
+        const hasOpponent = currentGame.opponent && currentGame.opponent.trim() !== "???";
+        if (!hasOpponent || isGameActive() || currentGame.loadedPastGame) return;
+
+        if (gameNumberRefreshTimer) clearTimeout(gameNumberRefreshTimer);
+        gameNumberRefreshTimer = setTimeout(() => { refreshGameNumberFromSheet(); }, 500);
+    }
+
     function handleOpponentSelection() {
         const sel = document.getElementById('opponent-select'), inp = document.getElementById('opponent-name-input');
         let oppName = "";
@@ -1162,7 +1251,8 @@
         
         document.getElementById('display-opp').innerText = currentGame.opponent; 
         document.getElementById('opp-card-title').innerHTML = `<strong>${safeName}</strong>`;
-        renderOpponentHistory(currentGame.opponent); 
+        renderOpponentHistory(currentGame.opponent);
+        refreshGameNumberForOpponentChange();
         updateLiveUI();
     }
 
@@ -2203,8 +2293,9 @@
             const dateStr = `<div style="font-size:0.75rem; color:#64748b; margin-top:2px;">📅 Started: ${m.matchTimestamp || "No timestamp recorded"}</div>`;
             
             let tScore = m.teamScore || 0, oScore = m.opponentScore || 0, teamDisplay = teamLabel, oppDisplay = cleanOppName;
-            if (tScore > oScore) { teamDisplay = `<strong>${teamLabel}</strong>`; oppDisplay = `<span style="font-weight: normal;">${cleanOppName}</span>`; } 
-            else if (oScore > tScore) { teamDisplay = `<span style="font-weight: normal;">${teamLabel}</span>`; oppDisplay = `<strong>${cleanOppName}</strong>`; } 
+            let historyResultText = "Draw", historyResultColor = "var(--warning)";
+            if (tScore > oScore) { historyResultText = "Win"; historyResultColor = "var(--success)"; teamDisplay = `<strong>${teamLabel}</strong>`; oppDisplay = `<span style="font-weight: normal;">${cleanOppName}</span>`; } 
+            else if (oScore > tScore) { historyResultText = "Loss"; historyResultColor = "var(--danger)"; teamDisplay = `<span style="font-weight: normal;">${teamLabel}</span>`; oppDisplay = `<strong>${cleanOppName}</strong>`; } 
             else { teamDisplay = `<span style="font-weight: normal;">${teamLabel}</span>`; oppDisplay = `<span style="font-weight: normal;">${cleanOppName}</span>`; }
 
             const matchStats = getMatchPlayerStats(m.quartersBreakdown || []);
@@ -2256,8 +2347,8 @@
             return `<div class="history-card">
                         ${syncBadge}
                         <div class="history-card-header">
-                            <div style="text-align: left;"><h4 style="margin: 0; color: #334155; font-size: 1.1rem;">${displayMatchName}: ${teamDisplay} vs ${oppDisplay}</h4>${dateStr}</div>
-                            <div class="history-score">${tScore} - ${oScore}</div>
+                            <div style="text-align: left;"><h4 style="margin: 0; color: #334155; font-size: 1.1rem;"><strong>${displayMatchName}</strong> <span>vs ${cleanOppName}</span></h4>${dateStr}</div>
+                            <div class="history-score" style="color: ${historyResultColor};">${historyResultText.toUpperCase()} (${tScore} - ${oScore})</div>
                         </div>
                         <div style="font-size: 0.9rem; color: #475569; margin-bottom: 5px; line-height: 1.4; text-align: left;">
                             ${teamSummaryHtml}
@@ -2291,7 +2382,7 @@
                 const usScore = m.teamScore || 0;
                 const oppScore = m.opponentScore || 0;
                 const oppName = m.opponent || "Opponent";
-                const teamName = m.ourTeam || savedOurTeamName || "Our Team";
+                const timeStamp = m.matchTimestamp || "No timestamp recorded";
                 let resultText = "Draw";
                 let resultColor = "var(--warning)";
                 if (usScore > oppScore) { resultText = "Win"; resultColor = "var(--success)"; }
@@ -2301,10 +2392,10 @@
                 <div class="stats-match-card">
                     <div class="stats-match-header">
                         <div class="stats-match-title">
-                            <strong style="color: ${resultColor};">[${resultText}]</strong> <strong>${gameName}</strong><br>
-                            <span class="stats-match-meta">${teamName} vs ${oppName}</span>
+                            <strong>${gameName}</strong> <span>vs ${oppName}</span>
+                            <div class="stats-match-meta">📅 ${timeStamp}</div>
                         </div>
-                        <div class="stats-match-score">${usScore} - ${oppScore}</div>
+                        <div class="stats-match-score" style="color: ${resultColor};">${resultText.toUpperCase()} (${usScore} - ${oppScore})</div>
                     </div>
                     <button class="btn-nav btn-nav-stats btn-stats-details" onclick="showGameDetails(${globalIndex})">📄 Details</button>
                 </div>`;
@@ -2340,6 +2431,31 @@
 
         if(chartShootersInstance) chartShootersInstance.destroy();
         chartShootersInstance = new Chart(document.getElementById('chartShooters'), { type: 'bar', data: { labels: pNames, datasets: [ { label: 'Goals', data: pGoals, backgroundColor: 'rgba(46, 125, 50, 0.2)', borderColor: '#2e7d32', borderWidth: 1 }, { label: 'Misses', data: pMisses, backgroundColor: 'rgba(198, 40, 40, 0.2)', borderColor: '#c62828', borderWidth: 1 } ] }, options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } } } });
+
+        const performanceRows = document.getElementById('team-opponent-performance-rows');
+        if (performanceRows) {
+            let teamGoals = 0, teamMisses = 0, opponentGoals = 0, opponentMisses = 0;
+            activeHistory.forEach(m => {
+                teamGoals += m.teamScore || 0;
+                if (m.quartersBreakdown) {
+                    m.quartersBreakdown.forEach(q => {
+                        teamMisses += (q.gsMisses || 0) + (q.gaMisses || 0);
+                        opponentGoals += q.oppGoals || 0;
+                        opponentMisses += q.oppMisses || 0;
+                    });
+                } else {
+                    opponentGoals += m.opponentScore || 0;
+                }
+            });
+            const teamShots = teamGoals + teamMisses;
+            const opponentShots = opponentGoals + opponentMisses;
+            const teamAccuracy = teamShots > 0 ? Math.round((teamGoals / teamShots) * 100) : 0;
+            const opponentAccuracy = opponentShots > 0 ? Math.round((opponentGoals / opponentShots) * 100) : 0;
+            const teamLabel = savedOurTeamName || "Our Team";
+            performanceRows.innerHTML = `
+                <tr><td><strong>${teamLabel}</strong></td><td>${teamGoals}</td><td>${teamMisses}</td><td><b>${teamAccuracy}%</b></td></tr>
+                <tr><td><strong>Opponents</strong></td><td>${opponentGoals}</td><td>${opponentMisses}</td><td><b>${opponentAccuracy}%</b></td></tr>`;
+        }
 
         let qCounts = { 1: 0, 2: 0, 3: 0, 4: 0 }, qUsGoals = { 1: 0, 2: 0, 3: 0, 4: 0 }, qOppGoals = { 1: 0, 2: 0, 3: 0, 4: 0 };
         activeHistory.forEach(m => { if(m.quartersBreakdown) { m.quartersBreakdown.forEach(q => { if(q.quarterNumber >= 1 && q.quarterNumber <= 4) { qCounts[q.quarterNumber]++; qUsGoals[q.quarterNumber] += (q.gsGoals || 0) + (q.gaGoals || 0); qOppGoals[q.quarterNumber] += (q.oppGoals || 0); } }); } });
